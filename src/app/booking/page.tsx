@@ -10,7 +10,7 @@ export default async function Page() {
     {
       limit: 7,
       branch_id: branch.data.items[0].id,
-      sort: true
+      sort: false
     },
     "employee"
   );

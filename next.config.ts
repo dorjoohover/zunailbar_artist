@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   },
   // reactStrictMode: false,
   images: {
-    domains: ["srv952218.hstgr.cloud", "localhost"],
+    domains: ["api.zunailbar.mn", "localhost"],
   },
   experimental: {
     serverActions: {

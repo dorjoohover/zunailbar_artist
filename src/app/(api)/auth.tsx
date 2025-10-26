@@ -14,7 +14,6 @@ export const login = async (dto: ILoginUser) => {
       },
       body: JSON.stringify(dto),
     });
-    console.log(res);
     const data = await res.json();
     if (!res.ok)
       return {

@@ -103,13 +103,12 @@ export const BookingPage = ({
 
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    const { sort } = pg;
     await fetcher<Booking>(
       Api.booking,
       {
         page: page,
         limit,
-        sort,
+        sort: false,
         branch_id: branch.id,
         //   name: pg.filter,
       },
@@ -125,6 +124,7 @@ export const BookingPage = ({
     const date = lastDate;
     setAction(ACTION.RUNNING);
     const body = e as BookingType;
+
     const res = await create<IBooking>(Api.booking, {
       index: date,
       times: body.dates,
@@ -152,6 +152,7 @@ export const BookingPage = ({
         return "";
       }
     });
+
     const res = await create<Booking>(Api.booking, {
       date: date,
       times: dates,
@@ -298,11 +299,10 @@ export const BookingPage = ({
               </Button>
             )}
           </div>
-
           {bookings?.items && bookings?.items?.length > 0 ? (
             <ScheduleTable
               d={bookings.items?.[0]?.index ?? 0}
-              value={bookings.items.map((item) => item.times).reverse()}
+              value={bookings.items.map((item) => item.times)}
               edit={editSchedule}
               setEdit={setUpdate}
             />

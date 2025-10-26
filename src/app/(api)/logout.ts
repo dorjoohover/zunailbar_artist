@@ -9,7 +9,7 @@ export const logout = async () => {
     store.delete("merchant_id");
     store.delete("branch_id");
     return NextResponse.redirect(
-      new URL("/", process.env.NEXT_PUBLIC_BASE_URL || "https://admin.srv952218.hstgr.cloud")
+      new URL("/", process.env.NEXT_PUBLIC_BASE_URL || "https://admin.zunailbar.mn")
     );
   } catch (error) {
     console.log(error);

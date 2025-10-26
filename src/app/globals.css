@@ -22,9 +22,6 @@
   }
 }
 
-
-
-
 @utility custom-bg {
   @apply bg-[url(/bg/image.png)];
 }
@@ -51,7 +48,7 @@
 
 /* Label */
 @utility checkbox-label {
-  @apply flex items-center gap-2 p-1 rounded text-sm cursor-pointer hover:bg-gray-100
+  @apply flex items-center gap-2 p-1 rounded text-sm cursor-pointer hover:bg-gray-100;
 }
 
 @utility filter-label {
@@ -102,7 +99,6 @@
 
   /* System colors */
 
-  
   --color-system-success-primary: #2cb59e;
   --color-system-success-secondary: #2cb59e33;
   --color-system-error-primary: #ff5c69;

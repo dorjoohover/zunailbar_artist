@@ -1,33 +1,35 @@
 import { OrderStatus } from "@/lib/enum";
+import { UserService } from "./user.service.model";
 
 export interface IOrder {
-  id?: string;
   user_id?: string;
   customer_id?: string;
-  duration?: number;
+  customer_desc?: string;
+  branch_id?: string;
   order_date?: string;
   start_time?: string;
   end_time?: string;
-  order_status?: OrderStatus;
-  pre_amount?: number;
-  is_pre_amount_paid?: boolean;
-  total_amount?: number;
-  branch_id?: string;
-  phone?: string;
-  paid_amount?: number;
-  customer_desc?: string;
+  // pre_amount: number;
+  users?: Record<string, string>;
   user_desc?: string;
-  created_at?: Date;
-  updated_at?: Date;
+  details?: IOrderDetail[] | any[];
+  duplicated?: boolean;
+  id?: string;
+  order_status?: OrderStatus | undefined;
   edit?: string;
-  details?: IOrderDetail[];
+  total_amount?: number;
+  paid_amount?: number;
+  pre_amount?: number;
+  duration?: number;
+  is_pre_amount_paid?: boolean;
+  phone?: string;
+  color?: number;
 }
 export interface Order {
   id: string;
-  branch_id?: string;
   user_id: string;
-  phone: string;
   customer_id: string;
+  branch_id?: string;
   duration: number;
   order_date: string;
   start_time: string;
@@ -39,31 +41,29 @@ export interface Order {
   paid_amount: number;
   customer_desc: string;
   user_desc: string;
-  discount: number;
-  discount_type: number;
-  color?: number;
-  user_name?: string;
-  status: number;
   created_at?: Date;
   updated_at?: Date;
-  details?: OrderDetail[];
-}
-
-export interface OrderDetail {
-  id: string;
-  order_id: string;
-  service_id: string;
-  service_name: string;
-  price: number;
-  status: number;
-  created_at?: Date;
 }
 
 export interface IOrderDetail {
   id?: string;
   order_id?: string;
-  service_id?: string;
+  service_id: string;
+  max_price?: number;
+  min_price?: number;
   service_name?: string;
-  price?: number;
+  user_id?: string;
+  duration?: number;
+  duplicated?: boolean;
+  category?: number | null;
   created_at?: Date;
+  pre?: number;
+}
+
+export interface DateTime {
+  [index: number]: number[];
+}
+export interface UserDateTime extends UserService {
+  slots: DateTime;
+  services: string[];
 }

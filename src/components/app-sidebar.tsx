@@ -7,7 +7,6 @@ import {
   Wallet,
   SquareUserRound,
   Milk,
-  ShieldUserIcon,
   ChevronRight,
   UsersRound,
   UserRound,
@@ -64,75 +63,7 @@ export const sidebar_items = [
         // icon: GraphIcon,
         icon: LayoutDashboard,
       },
-      {
-        triggerLabel: "Ажилчид",
-        url: "",
-        icon: UsersRound,
-        children: [
-          {
-            title: "Ажилчдын удирдлага",
-            icon: SquareUserRound,
-            url: "/employees",
-          },
-          // {
-          //   title: "Ажилтан нэмэх",
-          //   icon: SquareUserRound,
-          //   id: MODAL_ACTION.add_emp,
-          // },
-          {
-            title: "Ажилчдад олгосон бүтээгдэхүүн",
-            icon: SquareUserRound,
-            url: "/employees/product",
-          },
-          {
-            title: "Ажилтны хийдэг үйлчилгээ",
-            icon: SquareUserRound,
-            url: "/employees/service",
-          },
-          {
-            title: "Ажилтны цалин",
-            icon: SquareUserRound,
-            url: "/employees/salary",
-          },
-          // {
-          //   title: "Ажилтны чөлөө авах хүсэлт",
-          //   icon: SquareUserRound,
-          //   url: "/employees/free",
-          // },
-        ],
-      },
-      {
-        triggerLabel: "Бүтээгдэхүүн",
-        url: "",
-        icon: Milk,
-        children: [
-          {
-            title: "Бүтээгдэхүүний удирдлага",
-            url: "/products",
-            // icon: Milk,
-          },
-          {
-            title: "Бүтээгдэхүүний хэрэглээ",
-            url: "/products/transaction",
-            // icon: Milk,
-          },
-          {
-            title: "Худалдан авалт",
-            url: "/products/history",
-            // icon: Milk,
-          },
-          {
-            title: "Агуулах",
-            url: "/products/warehouse",
-            // icon: Milk,
-          },
-          {
-            title: "Хэрэглээний зардал",
-            url: "/products/cost",
-            // icon: Milk,
-          },
-        ],
-      },
+
       {
         triggerLabel: "Захиалга",
         url: "",
@@ -146,40 +77,6 @@ export const sidebar_items = [
         ],
       },
 
-      {
-        triggerLabel: "Үйлчилгээ",
-        url: "",
-        icon: HandCoins,
-        children: [
-          {
-            title: "Үйлчилгээний удирдлага",
-            url: "/services",
-            // icon: Milk,
-          },
-          {
-            title: "Үйлчилгээний урамшуулал",
-            url: "/services/discount",
-            // icon: Milk,
-          },
-        ],
-      },
-      {
-        triggerLabel: "Хэрэглэгчид",
-        url: "",
-        icon: Users,
-        children: [
-          {
-            title: "Хэрэглэгчдийн удирдлага",
-            url: "/users",
-            // icon: Milk,
-          },
-          {
-            title: "Хэрэглэгчийн хөнгөлөлт",
-            url: "/users/voucher",
-            // icon: Milk,
-          },
-        ],
-      },
       {
         triggerLabel: "Цагийн хуваарь",
         url: "",
@@ -220,91 +117,6 @@ export const sidebar_items = [
       },
     ],
   },
-
-  {
-    groupLabel: "Бусад",
-    item: [
-      {
-        label: "Үндсэн удирдлага",
-        triggerLabel: "Үндсэн",
-        url: "",
-        icon: SquareMenu,
-        children: [
-          {
-            title: "Ангилал удирдлага",
-            url: "/root/category",
-            // icon: Milk,
-          },
-          {
-            title: "Бренд удирдлага",
-            url: "/root/brand",
-            // icon: Milk,
-          },
-          {
-            title: "Агуулах удирдлага",
-            url: "/root/warehouse",
-            // icon: Milk,
-          },
-          {
-            title: "Хэрэглээний зардал",
-            url: "/root/cost",
-            // icon: Milk,
-          },
-          {
-            title: "Салбар удирдлага",
-            url: "/root/branch",
-            // icon: Milk,
-          },
-        ],
-      },
-      {
-        label: "Сайтны удирдлага",
-        triggerLabel: "Сайт",
-        url: "",
-        icon: Globe,
-        children: [
-          {
-            title: "Нүүр зурагнууд",
-            url: "/root/home",
-            // icon: Milk,
-          },
-          {
-            title: "Давуу талууд",
-            url: "/root/feature",
-            // icon: Milk,
-          },
-        ],
-      },
-      {
-        label: "Ажилчин",
-        triggerLabel: "Ажилчин",
-        url: "/",
-        icon: UserRound,
-        children: [
-          // {
-          //   title: "Хянах самбар",
-          //   url: "/employee",
-          //   icon: Milk,
-          // },
-          {
-            title: "Цагийн хуваарь",
-            url: "/employee",
-            // icon: Milk,
-          },
-          {
-            title: "Цалин",
-            url: "/employee/salary",
-            // icon: Milk,
-          },
-          // {
-          //   title: "Чөлөөний хүсэлт",
-          //   url: "/employee/leave-request",
-          //   // icon: Milk,
-          // },
-        ],
-      },
-    ],
-  },
 ];
 
 export function AppSidebar() {
@@ -339,7 +151,7 @@ export function AppSidebar() {
               />
               <div className="w-[1px] h-2/3 bg-white/20" />
               <span className="font-bold uppercase">
-                Zu Nailbar Admin panel
+                Zu Nailbar Artist panel
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -450,7 +262,7 @@ export function AppSidebar() {
                   size={"lg"}
                   className="text-white hover:bg-white/20"
                 >
-                  <ShieldUserIcon /> Админ
+                  Админ
                   <ChevronUp className="ml-auto" />
                 </SidebarMenuButton>
               </DropdownMenuTrigger>

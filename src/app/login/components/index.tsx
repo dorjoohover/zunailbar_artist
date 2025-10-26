@@ -47,7 +47,7 @@ export function LoginForm() {
   });
   const router = useRouter();
   const save = async (token: string, branch: string, merchant: string) => {
-    await fetch("/api/login", {
+    fetch("/api/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,8 +58,7 @@ export function LoginForm() {
         merchant,
       }),
     });
-    // router.push("/");
-    window.location.href = "/";
+    window.location.replace(window.location.href);
     router.refresh();
   };
   const onSubmit = async (value: ILoginUser) => {

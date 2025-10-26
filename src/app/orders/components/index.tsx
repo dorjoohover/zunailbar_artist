@@ -123,8 +123,17 @@ export const OrderPage = ({
   };
   const onSubmit = async <T,>(e: T) => {
     setAction(ACTION.RUNNING);
-    const body = e as OrderType;
-    const { edit, ...payload } = body;
+    const body = e as any;
+    const edit = body.edit;
+    let details = await Promise.all(
+      body.details.map((detail: any) => {
+        return {
+          ...detail,
+          user_id: body.user_id,
+        };
+      })
+    );
+    const payload = { ...body, details };
     const res = edit
       ? await updateOne<Order>(
           Api.order,
@@ -134,8 +143,8 @@ export const OrderPage = ({
           } as unknown as Order,
           "update"
         )
-      : await create<Order>(Api.order, {
-          ...e,
+      : await create(Api.order, {
+          ...payload,
         } as unknown as Order);
     if (res.success) {
       refresh();
@@ -194,7 +203,6 @@ export const OrderPage = ({
     // form.reset({ ...e, date: e.date?.toString().slice(0, 10), edit: e.id });
   };
   const columns = getColumns(edit, deleteOrders);
-
   return (
     <div className="relative">
       <DynamicHeader count={orders?.count} />

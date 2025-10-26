@@ -1,4 +1,18 @@
-import { Crown, Shield, User2 } from "lucide-react";
+import {
+  Brush,
+  BrushCleaning,
+  Bubbles,
+  Component,
+  Crown,
+  Eraser,
+  Footprints,
+  Hand,
+  Scissors,
+  Shield,
+  Smartphone,
+  Sparkles,
+  User2,
+} from "lucide-react";
 import {
   CategoryType,
   CostStatus,
@@ -213,6 +227,33 @@ export const OrderStatusValues = {
   [OrderStatus.Pending]: "Хүлээгдэж байна",
   [OrderStatus.ABSENT]: "Ирээгүй",
   [OrderStatus.Friend]: "Танил",
+};
+export const icons = {
+  [Brush.displayName ?? "Brush"]: Brush,
+  [Bubbles.displayName ?? "Bubbles"]: Bubbles,
+  [BrushCleaning.displayName ?? "BrushCleaning"]: BrushCleaning,
+  [Component.displayName ?? "Component"]: Component,
+  [Eraser.displayName ?? "Eraser"]: Eraser,
+  [Footprints.displayName ?? "Footprints"]: Footprints,
+  [Hand.displayName ?? "Hand"]: Hand,
+  [Scissors.displayName ?? "Scissors"]: Scissors,
+  [Smartphone.displayName ?? "Smartphone"]: Smartphone,
+  [Sparkles.displayName ?? "Sparkles"]: Sparkles,
+};
+
+export enum ServiceView {
+  SPECIAL = 10,
+  DEFAULT = 0,
+  FEATURED = 20,
+}
+
+export const getValueServiceView = {
+  [ServiceView.SPECIAL]: { name: "Онцлох", color: "green-badge badge" },
+  [ServiceView.DEFAULT]: { name: "Энгийн", color: "badge" },
+  [ServiceView.FEATURED]: {
+    name: "Хэрэглэгчдэд",
+    color: "neutral-badge  badge",
+  },
 };
 
 export const VALUES = {

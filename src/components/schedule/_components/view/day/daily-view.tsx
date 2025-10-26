@@ -84,24 +84,8 @@ const groupEventsByTimePeriod = (events: Order[] | undefined) => {
 
     return start_date.getTime() - end_date.getTime();
   });
-  // const sortedEvents = [...events].sort(
-  //   (a, b) => new Date(a.order).getTime() - new Date(b.startDate).getTime()
-  // );
 
-  // // Precise time overlap checking function
-  // const eventsOverlap = (event1: Event, event2: Event) => {
-  //   const start1 = new Date(event1.startDate).getTime();
-  //   const end1 = new Date(event1.endDate).getTime();
-  //   const start2 = new Date(event2.startDate).getTime();
-  //   const end2 = new Date(event2.endDate).getTime();
-
-  //   // Strict time overlap - one event starts before the other ends
-  //   return start1 < end2 && start2 < end1;
-  // };
-
-  // Use a graph-based approach to find connected components (overlapping event groups)
   const buildOverlapGraph = (events: IOrder[]) => {
-    // Create adjacency list
     const graph: Record<string, string[]> = {};
 
     // Initialize graph

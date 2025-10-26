@@ -82,9 +82,9 @@ export const PALETTE = FAMILIES.flatMap((c) =>
   }))
 );
 
-interface EventStyledProps extends Order {
+interface EventStyledProps extends IOrder {
   minmized?: boolean;
-  CustomEventComponent?: React.FC<Order>;
+  CustomEventComponent?: React.FC<IOrder>;
 }
 
 export default function EventStyled({
@@ -170,7 +170,7 @@ export default function EventStyled({
         description="Энэ үйлдлийг хийсний дараа захиалга бүрмөсөн устах бөгөөд буцаах боломжгүй гэдгийг анхаарна уу!"
         onConfirm={() => {
           // handlers.handleDeleteEvent(event?.id);
-          onDelete(event?.id);
+          onDelete(event?.id!);
           showToast("deleted", "Захиалга устгагдлаа!");
         }}
       />
@@ -253,8 +253,8 @@ export default function EventStyled({
             {event?.minmized && (
               <div className="text-[10px] flex justify-between">
                 <div>
-                  <span> {event.start_time.slice(0, 5)} - </span>
-                  <span> {event.end_time.slice(0, 5)} </span>
+                  <span> {event?.start_time?.slice(0, 5)} - </span>
+                  <span> {event?.end_time?.slice(0, 5)} </span>
                 </div>
                 <span className="opacity-80">
                   {event?.order_status &&

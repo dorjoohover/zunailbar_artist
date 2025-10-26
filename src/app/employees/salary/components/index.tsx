@@ -282,7 +282,7 @@ export const EmployeeUserSalaryPage = ({
           clear={() => setFilter(undefined)}
           columns={columns}
           count={userSalaries?.count}
-          data={userSalaries?.items ?? []}
+          data={(userSalaries?.items as any) ?? []}
           refresh={refresh}
           loading={action == ACTION.RUNNING}
           modalAdd={

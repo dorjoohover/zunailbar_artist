@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { money, parseDate } from "@/lib/functions";
 import { IService } from "@/models";
 import { TableActionButtons } from "@/components/tableActionButtons";
+import Image from "next/image";
+import { getValueServiceView, icons, ServiceView } from "@/lib/constants";
 
 export function getColumns(
   onEdit: (product: IService) => void,
@@ -42,6 +44,37 @@ export function getColumns(
           Үйлчилгээ <ArrowUpDown className="w-4 h-4 ml-2" />
         </Button>
       ),
+
+      cell: ({ row }) => {
+        const view = (row.original as any).view;
+        const color = view
+          ? getValueServiceView[view as ServiceView].color
+          : null;
+        return (
+          <p className={`${color ? color : ""}`}>{row.getValue("name")}</p>
+        );
+      },
+    },
+    {
+      accessorKey: "image",
+      header: "Зураг",
+      cell: ({ row }) => (
+        <Image
+          alt={row.getValue("name")}
+          src={`/api/file/${row.getValue("image")}`}
+          width={50}
+          height={50}
+        />
+      ),
+    },
+
+    {
+      accessorKey: "icon",
+      header: "Icon",
+      cell: ({ row }) => {
+        const Icon = icons?.[row.getValue("icon") as string];
+        if (Icon) return <Icon size={18} />;
+      },
     },
 
     {
@@ -83,6 +116,12 @@ export function getColumns(
       ),
       cell: ({ row }) => money(row.getValue("max_price"), "₮"),
     },
+    {
+      accessorKey: "pre",
+      header: "Урьдчилгаа",
+      cell: ({ row }) => money(row.getValue("pre") ?? "0", "₮"),
+    },
+
     {
       accessorKey: "created_at",
       header: ({ column }) => (

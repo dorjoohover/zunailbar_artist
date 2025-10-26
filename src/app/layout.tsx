@@ -25,8 +25,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZU Nailbar Admin",
-  description: "Zu Nailbar salon Admin Panel",
+  title: "ZU Nailbar Artist",
+  description: "Zu Nailbar salon Artist Panel",
 };
 
 export default async function RootLayout({

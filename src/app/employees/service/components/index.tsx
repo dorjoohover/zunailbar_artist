@@ -91,7 +91,7 @@ export const EmployeeUserServicePage = ({
           ? searchUsernameFormatter(user)
           : "",
         service_name: item.services
-          ?.map((s) => {
+          ?.map((s: any) => {
             return `${s.service_name}`;
           })
           .join(", "),
@@ -214,7 +214,7 @@ export const EmployeeUserServicePage = ({
           userServices?.items
             .filter((se) => se.user_id == editUser)
             ?.map((s) => {
-              return [...(s.services?.map((s) => s.service_id) ?? [])];
+              return [...(s.services?.map((s: any) => s.service_id) ?? [])];
             }) ?? [];
         form.reset({
           services: [...services[0]],
@@ -317,7 +317,7 @@ export const EmployeeUserServicePage = ({
           clear={() => setFilter(undefined)}
           columns={columns}
           count={userServices?.count}
-          data={userServices?.items ?? []}
+          data={(userServices?.items as any) ?? []}
           refresh={refresh}
           loading={action == ACTION.RUNNING}
           modalAdd={

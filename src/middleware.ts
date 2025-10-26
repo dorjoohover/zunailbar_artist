@@ -11,7 +11,11 @@ export function middleware(req: NextRequest) {
   if (
     pathname === "/login" ||
     pathname === "/api/login" ||
-    pathname.startsWith("/api/file")
+    pathname.startsWith("/api/file") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/logo") ||
+    pathname.startsWith("/bg")
   )
     return NextResponse.next();
 

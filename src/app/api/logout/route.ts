@@ -10,7 +10,7 @@ export async function GET() {
   return NextResponse.redirect(
     new URL(
       "/login",
-      process.env.NEXT_PUBLIC_BASE_URL || "https://admin.srv952218.hstgr.cloud/"
+      process.env.NEXT_PUBLIC_BASE_URL || "https://admin.zunailbar.mn/"
     )
   );
 }

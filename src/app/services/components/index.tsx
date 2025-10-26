@@ -9,6 +9,10 @@ import {
   DEFAULT_PG,
   Option,
   VALUES,
+  zStrOpt,
+  ServiceView,
+  getEnumValues,
+  getValueServiceView,
 } from "@/lib/constants";
 import { Modal } from "@/shared/components/modal";
 import z from "zod";
@@ -25,6 +29,12 @@ import DynamicHeader from "@/components/dynamicHeader";
 import { firstLetterUpper, objectCompact } from "@/lib/functions";
 import { showToast } from "@/shared/components/showToast";
 import { Switch } from "@/components/ui/switch";
+import { ACCEPT_ATTR, validateImageFile } from "@/lib/image.validator";
+import { Pencil, UploadCloud, X } from "lucide-react";
+import { IconPicker } from "@/components/icons/picker";
+import { Label } from "@/components/ui/label";
+import { imageUploader } from "@/app/(api)/base";
+import { Textarea } from "@/components/ui/textarea";
 
 const formSchema = z
   .object({
@@ -39,13 +49,14 @@ const formSchema = z
       }, z.number().nullable())
       .nullable()
       .optional() as unknown as number | null,
-    pre_amount: z
+    pre: z
       .preprocess((val) => {
         if (val === null || val === undefined || val === "") return 0;
         return typeof val === "string" ? parseFloat(val) : val;
       }, z.number())
       .nullable()
       .optional() as unknown as number,
+    description: zStrOpt,
     min_price: z
       .preprocess((val) => {
         if (val === null || val === undefined || val === "") return 0;
@@ -61,7 +72,19 @@ const formSchema = z
         message: "Хугацаа оруулна уу",
       }) as unknown as number,
     edit: z.string().nullable().optional(),
-    isAll: z.boolean(),
+    isAll: z.boolean().nullable().optional(),
+    image: zStrOpt,
+    view: z
+      .preprocess(
+        (val) => (typeof val === "string" ? parseInt(val, 10) : val),
+        z.nativeEnum(ServiceView).nullable()
+      )
+      .optional() as unknown as number,
+    file: z
+      .any()
+      // .refine((f) => f.size > 0, { message: "Файл заавал оруулна" })
+      .nullable(),
+    icon: zStrOpt,
   })
   .refine((data) => data.isAll, {
     message: "Салбар сонгоно уу",
@@ -77,11 +100,10 @@ const formSchema = z
     }
   )
   .refine(
-    (data) =>
-      (data?.pre_amount ?? 0) <= (data?.max_price ?? data?.min_price ?? 0),
+    (data) => (data?.pre ?? 0) <= (data?.max_price ?? data?.min_price ?? 0),
     {
       message: "Урьдчилгаа нийт дүнгээс хэтэрч болохгүй",
-      path: ["pre_amount"],
+      path: ["pre"],
     }
   );
 
@@ -90,10 +112,15 @@ const defaultValues: ServiceType = {
   name: "",
   max_price: null,
   min_price: 0,
-  pre_amount: 0,
+  pre: 0,
   duration: 0,
   edit: undefined,
+  icon: null,
+  image: null,
+  file: null,
   isAll: true,
+  description: null,
+  view: null,
 };
 type FilterType = {
   branch?: string;
@@ -135,7 +162,6 @@ export const ServicePage = ({
   }, [data]);
   const clear = () => {
     form.reset(defaultValues);
-    console.log(form.getValues());
   };
   const deleteService = async (index: number) => {
     const id = services!.items[index].id;
@@ -168,8 +194,15 @@ export const ServicePage = ({
   };
   const onSubmit = async <T,>(e: T) => {
     setAction(ACTION.RUNNING);
-    const body = e as ServiceType;
-    const { edit, ...payload } = body;
+
+    const { edit, file, ...body } = e as ServiceType;
+    const formData = new FormData();
+    let payload = { ...(body as unknown as IService) };
+    if (file != null) {
+      formData.append("files", file);
+      const uploadResult = await imageUploader(formData);
+      payload.image = uploadResult[0];
+    }
     const res = edit
       ? await updateOne<Service>(
           Api.service,
@@ -177,14 +210,15 @@ export const ServicePage = ({
           payload as unknown as Service
         )
       : await create<Service>(Api.service, e as Service);
-    console.log(res);
     if (res.success) {
       refresh();
       setOpen(false);
+      showToast("success", edit ? "Мэдээлэл засагдсан!" : "Ажилтан нэмэгдлээ!");
       clear();
+    } else {
+      showToast("info", res.error ?? "Алдаа гарлаа");
     }
     setAction(ACTION.DEFAULT);
-    showToast("success");
   };
   const onInvalid = async <T,>(e: T) => {
     console.log(e);
@@ -242,29 +276,6 @@ export const ServicePage = ({
               {groups.map((item, i) => {
                 const { key } = item;
                 return (
-                  // <FilterPopover
-                  //   key={i}
-                  //   content={item.items.map((it, index) => (
-                  //     <label
-                  //       key={index}
-                  //       className="checkbox-label"
-                  //     >
-                  //       <Checkbox
-                  //         checked={filter?.[key] == it.value}
-                  //         onCheckedChange={() => changeFilter(key, it.value)}
-                  //       />
-                  //       <span>{it.label as string}</span>
-                  //     </label>
-                  //   ))}
-                  //   value={
-                  //     filter?.[key]
-                  //       ? item.items.filter(
-                  //           (item) => item.value == filter[key]
-                  //         )[0].label
-                  //       : undefined
-                  //   }
-                  //   label={item.label}
-                  // />
                   <label key={i}>
                     <span className="filter-label">{item.label as string}</span>
                     <ComboBox
@@ -357,7 +368,7 @@ export const ServicePage = ({
 
                 <div className="divide-x-gray"></div>
 
-                <div className="double-col">
+                <div className="double-col mb-4">
                   {[
                     {
                       key: "min_price",
@@ -371,7 +382,7 @@ export const ServicePage = ({
                       label: "Их үнэ",
                     },
                     {
-                      key: "pre_amount",
+                      key: "pre",
                       type: "money",
                       label: "Урьдчилгаа",
                     },
@@ -400,9 +411,146 @@ export const ServicePage = ({
                     );
                   })}
                 </div>
+                <div className="double-col">
+                  <FormItems
+                    control={form.control}
+                    name="file"
+                    label="Зураг өөрчлөх"
+                  >
+                    {(field) => {
+                      const image = form.getValues("image");
+                      const fileUrl = field.value
+                        ? URL.createObjectURL(field.value as any)
+                        : null;
+
+                      return (
+                        <div className="relative w-32 h-32">
+                          {fileUrl || image ? (
+                            <>
+                              {/* Preview */}
+                              <img
+                                src={
+                                  fileUrl ??
+                                  `/api/file/${form.getValues("image")}`
+                                }
+                                alt="preview"
+                                className="object-cover w-full h-full overflow-hidden bg-white border rounded-md"
+                              />
+
+                              {/* Change */}
+                              <label
+                                htmlFor="file-upload"
+                                className="absolute p-1 rounded cursor-pointer top-1 right-7 bg-primary hover:bg-slate-600"
+                              >
+                                <Pencil className="text-white size-3" />
+                              </label>
+
+                              {/* Remove */}
+                              <button
+                                type="button"
+                                onClick={() => field.onChange(null)}
+                                className="absolute p-1 rounded cursor-pointer top-1 right-1 bg-primary hover:bg-slate-600"
+                              >
+                                <X className="text-white size-3" />
+                              </button>
+                            </>
+                          ) : (
+                            // Empty state uploader
+                            <label
+                              htmlFor="file-upload"
+                              className="flex flex-col items-center justify-center w-full h-full transition-colors bg-white border rounded-md cursor-pointer hover:bg-gray-50"
+                            >
+                              <UploadCloud className="w-6 h-6 text-gray-500" />
+                              <span className="mt-1 text-xs text-gray-500">
+                                Browse
+                              </span>
+                            </label>
+                          )}
+
+                          {/* Hidden input */}
+                          <input
+                            id="file-upload"
+                            type="file"
+                            className="hidden"
+                            accept={ACCEPT_ATTR}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+
+                              const res = validateImageFile(file);
+                              if (!res.ok) {
+                                showToast("error", res.message);
+                                e.currentTarget.value = ""; // буруу бол reset
+                                return;
+                              }
+                              field.onChange(file);
+                            }}
+                          />
+                        </div>
+                      );
+                    }}
+                  </FormItems>
+                  <div>
+                    <div className="flex gap-2">
+                      <FormItems
+                        control={form.control}
+                        name={`icon`}
+                        label="Icon сонгох"
+                        className="flex flex-col items-start"
+                      >
+                        {(field) => {
+                          const value = field.value;
+                          return (
+                            <IconPicker
+                              value={value ? value : undefined}
+                              onChange={(e) => field.onChange(e)}
+                            />
+                          );
+                        }}
+                      </FormItems>
+                      <FormItems
+                        control={form.control}
+                        name={"view"}
+                        label="Төлөв"
+                        className={"col-span-2"}
+                      >
+                        {(field) => {
+                          return (
+                            <ComboBox
+                              props={{ ...field }}
+                              items={getEnumValues(ServiceView).map((item) => {
+                                return {
+                                  value: item.toString(),
+                                  label: getValueServiceView[item].name,
+                                };
+                              })}
+                            />
+                          );
+                        }}
+                      </FormItems>
+                    </div>
+                    <FormItems
+                      control={form.control}
+                      name={`description`}
+                      label="Тайлбар"
+                      className="mt-2"
+                    >
+                      {(field) => {
+                        const value = field.value;
+                        return (
+                          <Textarea
+                            className=""
+                            onChange={field.onChange}
+                            value={value as string}
+                          />
+                        );
+                      }}
+                    </FormItems>
+                  </div>
+                </div>
                 <div className="flex items-center gap-2 mt-2 max-w-lg w-full">
                   <Switch
-                    checked={isAll}
+                    checked={isAll ?? false}
                     onCheckedChange={(val) => form.setValue("isAll", val)}
                     id="compare-switch"
                   />

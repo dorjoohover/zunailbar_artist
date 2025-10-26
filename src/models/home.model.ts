@@ -26,15 +26,17 @@ export interface Feature {
   id: string;
   title: string;
   description: string;
-  icon: number;
+  icon: string;
   status: number;
+  index: number;
   created_at?: Date;
 }
 export interface IFeature {
   id?: string;
+  index: number;
   title: string;
   description: string;
-  icon: number;
+  icon: string;
   status?: number;
   created_at?: Date;
 }
