@@ -9,6 +9,7 @@ export interface IUser {
   profile_img?: string;
   mobile?: string;
   birthday?: Date;
+  level?: number;
   added_by?: string;
   branch_id?: string;
   user_status?: number;
@@ -23,6 +24,7 @@ export interface User {
   percent?: number;
   color?: number;
   firstname?: string;
+  level?: number;
   lastname?: string;
   nickname?: string;
   role: ROLE;

@@ -20,27 +20,6 @@ import { Api } from "@/utils/api";
 import AppDialog from "@/shared/components/appDialog";
 import { mobileFormatter } from "@/lib/functions";
 
-// Function to format date
-const formatDate = (date: Date) => {
-  return date.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  });
-};
-
-// Function to format time only
-const formatTime = (date: Date) => {
-  return date.toLocaleString("en-US", {
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  });
-};
-
 // Color variants based on event type
 const FAMILIES = [
   "blue",
@@ -118,7 +97,7 @@ export default function EventStyled({
   function handleEditEvent(event: IOrder) {
     // Open the modal with the content
     setOpen(
-      <CustomModal title="Edit Event">
+      <CustomModal title="Захиалга засах">
         <AddEventModal
           send={send}
           items={values}
@@ -221,8 +200,7 @@ export default function EventStyled({
               branch_id: event.branch_id,
               customer_id: event.customer_id,
               user_id: event.user_id,
-              user_desc: event.user_desc,
-              customer_desc: event.customer_desc,
+              description: event.description,
               order_status: event.order_status,
               total_amount: event.total_amount ?? 0,
               order_date: event.order_date,
@@ -262,12 +240,10 @@ export default function EventStyled({
                 </span>
               </div>
             )}
-            {!event?.minmized && event?.user_desc && (
-              <div className="my-2 text-sm">{event?.user_desc} </div>
+            {!event?.minmized && event?.description && (
+              <div className="my-2 text-sm">{event?.description} </div>
             )}
-            {!event?.minmized && event?.customer_desc && (
-              <div className="my-2 text-sm">{event?.customer_desc} </div>
-            )}
+
             {!event?.minmized && (
               <div className="text-xs space-y-1 mt-2">
                 <div className="flex items-center">

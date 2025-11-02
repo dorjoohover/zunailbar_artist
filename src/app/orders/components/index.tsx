@@ -1,6 +1,6 @@
-"use client";
+"use client";;
 import { Branch, IOrder, Order, Service, User } from "@/models";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ListType,
   ACTION,
@@ -10,23 +10,19 @@ import {
   SearchType,
 } from "@/lib/constants";
 import z from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Api } from "@/utils/api";
-import { create, deleteOne, excel, search, updateOne } from "@/app/(api)";
+import { create, deleteOne, excel, find, updateOne } from "@/app/(api)";
 import { fetcher } from "@/hooks/fetcher";
 import SchedulerViewFilteration from "@/components/schedule/_components/view/schedular-view-filteration";
 import { SchedulerProvider } from "@/providers/schedular-provider";
 import DynamicHeader from "@/components/dynamicHeader";
-import { mnDate, usernameFormatter } from "@/lib/functions";
+import { mnDate, toTimeString } from "@/lib/functions";
 import { showToast } from "@/shared/components/showToast";
-import { OrderStatus, ROLE } from "@/lib/enum";
+import { OrderStatus } from "@/lib/enum";
 import { getColumns } from "./columns";
-import { DataTable } from "@/components/data-table";
-import { Switch } from "@/components/ui/switch";
-import { DatePicker } from "@/shared/components/date.picker";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, FileText } from "lucide-react";
+import { Check } from "lucide-react";
+import { AppAlertDialog } from "@/components/AlertDialog";
 
 const formSchema = z.object({
   branch_id: z.string().min(1),
@@ -64,29 +60,13 @@ export const OrderPage = ({
   const [action, setAction] = useState(ACTION.DEFAULT);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [orders, setOrders] = useState<ListType<Order>>(ListDefault);
-  const userMap = useMemo(
-    () => new Map(users.map((b) => [b.id, b.value])),
-    [users]
-  );
 
   const [status, setStatus] = useState<OrderStatus | null>(null);
 
   const orderFormatter = (data: ListType<Order>) => {
     const items: Order[] = data.items.map((item) => {
-      const user = userMap.get(item.user_id);
-      const [mobile, nickname, branch_id, color] = user?.split("__") ?? [
-        "",
-        "",
-        "",
-        "",
-      ];
       return {
         ...item,
-        user_name: user ? `${nickname} ${mobile}` : "",
-        phone: mobile,
-        branch_id: branch_id,
-        color: +color,
-        // branch_name: user?.name ?? "",
       };
     });
 
@@ -98,15 +78,18 @@ export const OrderPage = ({
     refresh();
     return res.success;
   };
-
+  const dateFormat = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
     const { page, limit, sort } = pg;
     const d = mnDate(currentDate);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const date = `${y}-${m}-${day}`;
+
+    const date = dateFormat(d);
 
     await fetcher<Order>(Api.order, {
       page: page ?? DEFAULT_PG.page,
@@ -123,23 +106,17 @@ export const OrderPage = ({
   };
   const onSubmit = async <T,>(e: T) => {
     setAction(ACTION.RUNNING);
-    const body = e as any;
-    const edit = body.edit;
-    let details = await Promise.all(
-      body.details.map((detail: any) => {
-        return {
-          ...detail,
-          user_id: body.user_id,
-        };
-      })
-    );
-    const payload = { ...body, details };
+    const { edit, ...body } = e as any;
+
+    const payload = { ...body };
     const res = edit
       ? await updateOne<Order>(
           Api.order,
           edit ?? "",
           {
             ...payload,
+            start_time: toTimeString(payload.start_time),
+            // order_date: mnDate(payload.order_date),
           } as unknown as Order,
           "update"
         )
@@ -202,6 +179,18 @@ export const OrderPage = ({
     // console.log(e);
     // form.reset({ ...e, date: e.date?.toString().slice(0, 10), edit: e.id });
   };
+
+  const confirmOrders = async () => {
+    const date = dateFormat(mnDate(currentDate));
+    const res = await find(Api.order, {}, `confirm/${date}`);
+    const success = res?.data?.count > 0;
+    showToast(
+      success ? "success" : "info",
+      success ? `${res.data.count} захиалга баталгаажлаа` : "Захиалга олдсонгүй"
+    );
+  };
+  console.log(orders);
+
   const columns = getColumns(edit, deleteOrders);
   return (
     <div className="relative">
@@ -231,6 +220,22 @@ export const OrderPage = ({
               refresh={refresh}
             />
           </SchedulerProvider>
+          <div className="flex justify-end my-8">
+            <AppAlertDialog
+              onConfirm={confirmOrders}
+              title={`${dateFormat(
+                mnDate(currentDate)
+              )} өдрийн захиалгуудыг хаахдаа бэлэн байна уу`}
+              trigger={
+                <Button variant="default">
+                  <Check className="w-4 h-4 text-green-500" />
+                  Захиалга хаах
+                </Button>
+              }
+            />
+          </div>
+
+          {/* <Button>Баталгаажуулах</Button> */}
         </div>
       </div>
     </div>

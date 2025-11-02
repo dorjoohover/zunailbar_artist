@@ -1,4 +1,4 @@
-import { ZValidator } from "@/lib/constants";
+import { zNumOpt, zStrOpt, ZValidator } from "@/lib/constants";
 import { OrderStatus } from "@/lib/enum";
 import { IOrder, Order } from "@/models";
 import { Dispatch, SVGProps } from "react";
@@ -96,15 +96,21 @@ const detail = z.object({
     )
     .nullable()
     .optional() as unknown as number,
+  description: zStrOpt,
+  price: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return 0;
+    if (typeof val === "string") return parseFloat(val);
+    return val;
+  }, z.number()) as unknown as number,
+  user_id: zStrOpt,
 });
 
 export const eventSchema = z.object({
-  branch_id:ZValidator.branch.optional(),
-  user_id: ZValidator.user.optional(),
+  branch_id: ZValidator.branch.optional(),
 
   customer_id: ZValidator.customer.optional(),
   details: z.array(detail),
-  customer_desc: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
   order_date: z.string(),
   start_time: z.string(),
   end_time: z.string().nullable().optional(),
@@ -114,19 +120,21 @@ export const eventSchema = z.object({
       z.nativeEnum(OrderStatus).nullable()
     )
     .optional() as unknown as number,
-  user_desc: z.string().nullable().optional(),
-  total_amount: z.preprocess(
-    (val) => (typeof val === "string" ? parseFloat(val) : val),
-    z.number()
-  ) as unknown as number,
-  pre_amount: z.preprocess(
-    (val) => (typeof val === "string" ? parseFloat(val) : val),
-    z.number()
-  ) as unknown as number,
-  paid_amount: z.preprocess(
-    (val) => (typeof val === "string" ? parseFloat(val) : val),
-    z.number()
-  ) as unknown as number,
+  total_amount: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return 0;
+    if (typeof val === "string") return parseFloat(val);
+    return val;
+  }, z.number()) as unknown as number,
+  pre_amount: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return 0;
+    if (typeof val === "string") return parseFloat(val);
+    return val;
+  }, z.number()) as unknown as number,
+  paid_amount: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return 0;
+    if (typeof val === "string") return parseFloat(val);
+    return val;
+  }, z.number()) as unknown as number,
   edit: z.string().nullable().optional(),
 });
 

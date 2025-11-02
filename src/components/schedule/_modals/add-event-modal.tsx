@@ -1,4 +1,4 @@
-"use client";
+"use client";;
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -26,10 +26,13 @@ import {
   toTimeString,
 } from "@/lib/functions";
 import { TextField } from "@/shared/components/text.field";
-import { MultiSelect } from "@/shared/components/multiple.select";
 import { showToast } from "@/shared/components/showToast";
 import { Api } from "@/utils/api";
 import { search } from "@/app/(api)";
+import { Textarea } from "@/components/ui/textarea";
+import { FormItem, FormLabel } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 const defaultValues = {
   branch_id: "",
   user_id: "",
@@ -58,7 +61,7 @@ export default function AddEventModal({
   };
   loading?: boolean;
   send: (order: IOrder) => void;
-  values?: IOrder;
+  values?: IOrder | any;
   // CustomAddEventModal?: React.FC<{ register: any; errors: any }>;
 }) {
   const { setClose, data } = useModal();
@@ -69,65 +72,57 @@ export default function AddEventModal({
   const [allItems, setValues] = useState(items);
 
   const searchField = async (v: string, key: Api, edit?: boolean) => {
-    let value = "";
-    if (v?.length > 1) value = v;
-    if (v?.length == 1) return;
-    if (edit && v == "") {
-      if (key == Api.customer)
-        form.setValue("customer_id", values?.customer_id);
-      if (key == Api.user) form.setValue("user_id", values?.user_id);
+    if (edit && key === Api.customer) {
+      form.setValue("customer_id", values?.customer_id);
     }
 
-    const artist = form.watch("user_id");
-    const details = form.watch("details");
-    const payload =
-      key === Api.branch
-        ? { name: value }
-        : key === Api.service
-        ? { name: value, user_id: artist }
-        : edit === undefined
-        ? {
-            id: value,
-            role: key == Api.customer ? ROLE.CLIENT : ROLE.E_M,
-            services: details.map((d) => d.service_id).join(","),
-          }
-        : {
-            role: key == Api.customer ? ROLE.CLIENT : ROLE.E_M,
-            services: details.map((d) => d.service_id).join(","),
-            value: v,
-          };
-    await search(key == Api.customer ? Api.user : key, {
-      ...payload,
-      limit: 20,
-      page: 0,
-    }).then((d) => {
+    const value = v;
+    const details = form.watch("details") || [];
+    const branchId = form.watch("branch_id");
+
+    let payload: Record<string, any> = {};
+
+    if (key === Api.branch) {
+      payload = { name: value };
+    } else {
+      payload = {
+        role: key === Api.customer ? ROLE.CLIENT : ROLE.E_M,
+        services: details.map((d) => d.service_id).join(","),
+        branch_id: key === Api.customer ? undefined : branchId,
+        ...(edit === undefined ? { id: value } : { value }),
+      };
+    }
+
+    try {
+      const res = await search(key === Api.customer ? Api.user : key, {
+        ...payload,
+        limit: 100,
+        page: 0,
+      });
+
       setValues((prev) => ({
         ...prev,
-        [key]: d.data,
+        [key]: res.data,
       }));
-    });
+    } catch (error) {
+      console.error(`Search failed for ${key}:`, error);
+    }
   };
   const form = useForm<EventFormData>({
     resolver: zodResolver(eventSchema),
-    defaultValues: defaultValues,
+    defaultValues: values ?? defaultValues,
   });
+
   useEffect(() => {
-    if (values && form.watch("user_id") == "") {
-      searchField(values.user_id!, Api.user, true);
-      searchField(values.customer_id!, Api.customer, true);
-    }
-    if (form.watch("user_id") && form.watch("user_id") != "") {
+    const value = form.watch("branch_id");
+    if (value) {
+      form.setValue("details", []);
+      searchField("", Api.user);
       searchField("", Api.service);
-      searchField("", Api.user, false);
     }
-  }, [form.watch("details"), form.watch("user_id"), values]);
+  }, [form.watch("branch_id")]);
   // Reset the form on initialization
   useEffect(() => {
-    if (data?.default) {
-      const eventData = data?.default;
-      console.log("eventData", eventData);
-      form.reset(defaultValues);
-    }
     if (values) {
       form.reset({
         ...values,
@@ -137,19 +132,19 @@ export default function AddEventModal({
   }, [data, form.reset, values]);
 
   const onSubmit: SubmitHandler<EventFormData> = (formData) => {
+    const st = formData.start_time?.slice(0, 2);
+
     const newEvent: IOrder = {
-      customer_desc: formData.customer_desc ?? undefined,
+      branch_id: formData.branch_id,
+      details: formData.details,
+      order_date: formData.order_date as string,
+      start_time: st,
+      description: formData.description ?? undefined,
       customer_id: formData.customer_id,
-      user_id: formData.user_id,
-      user_desc: formData.user_desc ?? undefined,
       order_status: formData.order_status as OrderStatus | undefined,
       total_amount: formData.total_amount as number | undefined,
-      order_date: formData.order_date,
       paid_amount: +(formData.paid_amount ?? 0),
       pre_amount: +(formData.pre_amount ?? 0),
-
-      start_time: `${formData.start_time}`,
-      details: formData.details,
       edit: formData.edit ?? undefined,
     };
     send(newEvent);
@@ -163,24 +158,102 @@ export default function AddEventModal({
           return (v as any)?.message;
         }
         const value = VALUES[er];
-        return i == 0 ? firstLetterUpper(value) : value;
+        console.log(er, v);
+        return i == 0 ? firstLetterUpper(value ?? "") : value;
       })
       .join(", ");
     showToast("info", error);
   };
+  const details = form.watch("details");
+  type DetailType = {
+    service_id: string;
+    service_name: string;
+    duration: unknown;
+    description?: string | null | undefined;
+    price?: number | null | undefined;
+    user_id?: string | null | undefined;
+  };
+  const updateDetail = (index: number, value: any, key?: keyof DetailType) => {
+    const current = form.getValues("details") || [];
+
+    // Хэрвээ detail байхгүй бол шинэ item нэмнэ
+    if (!current[index]) {
+      form.setValue("details", [...current, value]);
+      return;
+    }
+
+    if (!key) {
+      const updated = details.filter((_, i) => i != index);
+      form.setValue("details", updated);
+      return;
+    }
+
+    const updated = current.map((item, i) =>
+      i === index ? { ...item, [key]: value } : item
+    );
+
+    form.setValue("details", updated);
+  };
+
   return (
     <form
-      className="space-y-4"
+      className="space-y-4 "
       onSubmit={form.handleSubmit(onSubmit, onInvalid)}
     >
       <FormProvider {...form}>
         <div className="double-col">
+          <div className="flex gap-4 items-start col-span-2">
+            <FormItems
+              control={form.control}
+              name="customer_id"
+              label="Хэрэглэгч"
+              className=" flex-1"
+            >
+              {(field) => {
+                return (
+                  <ComboBox
+                    search={(v) => {
+                      if (v.length > 1) searchField(v, Api.customer);
+                    }}
+                    props={{ ...field }}
+                    items={allItems.customer.map((item) => {
+                      const [mobile, nickname] = item?.value?.split("__") ?? [
+                        "",
+                        "",
+                        "",
+                        "",
+                      ];
+                      return {
+                        value: item.id,
+                        label: `${mobileFormatter(mobile)} ${nickname}`,
+                      };
+                    })}
+                  />
+                );
+              }}
+            </FormItems>
+            <FormItems
+              control={form.control}
+              name="description"
+              className="flex-1"
+              label="Хэрэглэгчийн тайлбар"
+            >
+              {(field) => {
+                return (
+                  <Textarea
+                    onChange={field.onChange}
+                    value={field.value as string}
+                  />
+                );
+              }}
+            </FormItems>
+          </div>
           <FormItems control={form.control} name="branch_id" label="Салбар">
             {(field) => {
               return (
                 <ComboBox
                   search={(e) => {
-                    searchField(e, Api.branch);
+                    if (e.length > 1) searchField(e, Api.branch);
                   }}
                   props={{ ...field }}
                   items={allItems.branch.map((item) => {
@@ -194,127 +267,6 @@ export default function AddEventModal({
               );
             }}
           </FormItems>
-          <FormItems control={form.control} name="details" label="Үйлчилгээ">
-            {(field) => {
-              // field.value нь [{service_id,...}] байдаг → MultiSelect-д массив id болгож дамжуулна
-              const selectedIds: string[] = Array.isArray(field.value)
-                ? field.value.map((d: any) => d?.service_id).filter(Boolean)
-                : [];
-
-              return (
-                <MultiSelect
-                  // RHF field-ийг “id массив” болгосон wrapper-оор өгнө
-                  search={(e) => searchField(e, Api.service)}
-                  props={
-                    {
-                      name: field.name,
-                      value: selectedIds,
-                      onChange: (ids: string[]) => {
-                        const nextDetails = ids.map((id) => {
-                          const svc = allItems.service.find((s) => s.id === id);
-                          const [name, duration] = svc?.value?.split("__") ?? [
-                            "",
-                            null,
-                          ];
-                          return {
-                            service_id: id,
-                            service_name: name ?? "",
-                            duration: duration ?? null,
-                          };
-                        });
-                        field.onChange(nextDetails);
-                      },
-                      onBlur: field.onBlur,
-                      ref: field.ref,
-                    } as any
-                  }
-                  items={allItems.service.map((s) => {
-                    const [name] = s.value?.split("__") ?? [""];
-                    return {
-                      label: name,
-                      value: s.id,
-                    };
-                  })}
-                />
-              );
-            }}
-          </FormItems>
-          <FormItems
-            control={form.control}
-            name="customer_id"
-            label="Хэрэглэгч"
-          >
-            {(field) => {
-              return (
-                <ComboBox
-                  search={(v) => searchField(v, Api.customer)}
-                  props={{ ...field }}
-                  items={allItems.customer.map((item) => {
-                    const [mobile, nickname] = item?.value?.split("__") ?? [
-                      "",
-                      "",
-                      "",
-                      "",
-                    ];
-                    return {
-                      value: item.id,
-                      label: `${mobileFormatter(mobile)} ${nickname}`,
-                    };
-                  })}
-                />
-              );
-            }}
-          </FormItems>
-
-          <FormItems control={form.control} name="user_id" label="Артист">
-            {(field) => {
-              return (
-                <ComboBox
-                  search={(e) => searchField(e, Api.user)}
-                  props={{ ...field }}
-                  items={allItems.user
-                    .filter((user) => {
-                      const branch = form.watch("branch_id");
-                      return branch ? user.value.includes(branch) : user;
-                    })
-                    .map((item) => {
-                      const [mobile, nickname] = item?.value?.split("__") ?? [
-                        "",
-                        "",
-                        "",
-                        "",
-                      ];
-
-                      return {
-                        value: item.id,
-                        label: `${mobileFormatter(mobile)} ${nickname}`,
-                      };
-                    })}
-                />
-              );
-            }}
-          </FormItems>
-        </div>
-
-        <FormItems
-          control={form.control}
-          name="user_desc"
-          label="Артистын тайлбар"
-        >
-          {(field) => {
-            return <TextField props={{ ...field }} />;
-          }}
-        </FormItems>
-        <FormItems
-          control={form.control}
-          name="customer_desc"
-          label="Хэрэглэгчийн тайлбар"
-        >
-          {(field) => {
-            return <TextField props={{ ...field }} />;
-          }}
-        </FormItems>
-        <div className="double-col">
           <FormItems control={form.control} name="order_status" label="Статус">
             {(field) => {
               return (
@@ -330,60 +282,194 @@ export default function AddEventModal({
               );
             }}
           </FormItems>
-          <FormItems
-            control={form.control}
-            name="total_amount"
-            label="Нийт төлбөр"
-          >
-            {(field) => {
-              return <TextField type="money" props={{ ...field }} />;
-            }}
-          </FormItems>
-          <FormItems
-            control={form.control}
-            name="pre_amount"
-            label="Урьдчилгаа төлбөр"
-          >
-            {(field) => {
-              return <TextField type="money" props={{ ...field }} />;
-            }}
-          </FormItems>
-          <FormItems
-            control={form.control}
-            name="paid_amount"
-            label="Гүйцээж төлсөн төлбөр"
-          >
-            {(field) => {
-              return <TextField type="money" props={{ ...field }} />;
-            }}
-          </FormItems>
-          <FormItems control={form.control} name="order_date" label="Огноо">
-            {(field) => {
-              field.value = mnDateFormat((field.value as Date) ?? new Date());
-              return <TextField type="date" props={{ ...field }} />;
-            }}
-          </FormItems>
-          <FormItems control={form.control} name="start_time" label="Эхлэх цаг">
-            {(field) => {
-              field.value = field.value
-                ? +field.value?.toString().slice(0, 2)
-                : field.value;
-              return (
-                <ComboBox
-                  props={{ ...field }}
-                  items={numberArray(totalHours).map((item) => {
-                    const value = item + 6;
-
-                    return {
-                      value: value.toString(),
-                      label: toTimeString(value),
-                    };
-                  })}
-                />
-              );
-            }}
-          </FormItems>
         </div>
+        <div className="border-t ">
+          <p className="my-4">Төлбөр</p>
+          <div className="double-col">
+            <FormItems
+              control={form.control}
+              name="total_amount"
+              label="Нийт төлбөр"
+            >
+              {(field) => {
+                return <TextField type="money" props={{ ...field }} />;
+              }}
+            </FormItems>
+            <FormItems
+              control={form.control}
+              name="pre_amount"
+              label="Урьдчилгаа төлбөр"
+            >
+              {(field) => {
+                return <TextField type="money" props={{ ...field }} />;
+              }}
+            </FormItems>
+            <FormItems
+              control={form.control}
+              name="paid_amount"
+              label="Гүйцээж төлсөн төлбөр"
+            >
+              {(field) => {
+                return <TextField type="money" props={{ ...field }} />;
+              }}
+            </FormItems>
+          </div>
+        </div>
+        <div className="border-t ">
+          <p className="my-4">Цагийн хуваарь</p>
+          <div className="double-col">
+            <FormItems control={form.control} name="order_date" label="Огноо">
+              {(field) => {
+                // field.value = mnDateFormat((field.value as Date) ?? new Date());
+                return <TextField type="date" props={{ ...field }} />;
+              }}
+            </FormItems>
+            <FormItems
+              control={form.control}
+              name="start_time"
+              label="Эхлэх цаг"
+            >
+              {(field) => {
+                field.value = field.value
+                  ? +field.value?.toString().slice(0, 2)
+                  : field.value;
+                return (
+                  <ComboBox
+                    props={{ ...field }}
+                    items={numberArray(totalHours).map((item) => {
+                      const value = item + 6;
+
+                      return {
+                        value: value.toString(),
+                        label: toTimeString(value),
+                      };
+                    })}
+                  />
+                );
+              }}
+            </FormItems>
+          </div>
+        </div>
+        <div className="border p-2 rounded-md">
+          <p className="my-2 font-bold">Үйлчилгээ</p>
+          <div className="grid grid-cols-2 gap-1 max-h-[220px] overflow-auto">
+            {allItems.service.map((service, i) => {
+              const [name, duration] = service.value?.split("__") ?? [""];
+              const selected = details?.findIndex(
+                (s) => s.service_id == service.id
+              );
+              return (
+                <div key={i} className="col-span-1 flex gap-2 items-center ">
+                  <Checkbox
+                    checked={details?.some((d) => d.service_id === service.id)}
+                    id={service.id}
+                    onCheckedChange={() => {
+                      updateDetail(selected, {
+                        service_id: service.id,
+                        service_name: name,
+                        duration: duration ? +duration : 0,
+                        description: "",
+                        price: 0,
+                        user_id: "",
+                      });
+                    }}
+                    aria-label="Select row"
+                  />
+                  <Label htmlFor={service.id} className="font-[600]">
+                    {name}
+                  </Label>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {details?.length > 0 && (
+          <div className="border-t">
+            <p className="my-4">Үйлчилгээ</p>
+            <div>
+              {details?.map((detail, i) => {
+                const users = allItems.user;
+                const user = users.filter((u) => detail?.user_id == u.id)?.[0];
+                const [mobile, nickname] = user?.value?.split("__") ?? [
+                  "",
+                  "",
+                  "",
+                  "",
+                ];
+                return (
+                  <div key={i} className="border rounded-md px-3 py-3">
+                    <p className="mb-3">{detail.service_name}</p>
+                    <div className="grid gap-3">
+                      <div className="px-2 py-3 bg-gray-100 border rounded-md">
+                        <p className="text-md mb-2">Artist {i + 1}</p>
+                        <div className="double-col">
+                          <FormItem>
+                            <FormLabel>Артист</FormLabel>
+                            <ComboBox
+                              className="max-w-xs"
+                              items={users.map((b, i) => {
+                                const [mobile, nickname] = b?.value?.split(
+                                  "__"
+                                ) ?? ["", "", "", ""];
+                                return {
+                                  label: `${firstLetterUpper(
+                                    nickname
+                                  )} ${mobileFormatter(mobile)}`,
+                                  value: b.id,
+                                };
+                              })}
+                              props={{
+                                onChange: (v: string) => {
+                                  console.log(details, v);
+                                  updateDetail(i, v, "user_id");
+                                },
+                                name: "",
+                                onBlur: () => {},
+                                ref: () => {},
+                                value: detail?.user_id,
+                              }}
+                            />
+                            {/* {message && <FormMessage />} */}
+                          </FormItem>
+
+                          <FormItem>
+                            <FormLabel>Төлбөр</FormLabel>
+                            <TextField
+                              type={"money"}
+                              props={{
+                                onChange: (v: string) => {
+                                  const value = parseInt(v);
+                                  updateDetail(
+                                    i,
+                                    isNaN(value) ? 0 : value,
+                                    "price"
+                                  );
+                                },
+                                name: "",
+                                onBlur: () => {},
+                                ref: () => {},
+                                value: detail?.price ?? "",
+                              }}
+                            />
+                          </FormItem>
+                        </div>
+                        <FormItem className="mt-2">
+                          <FormLabel>Тайлбар</FormLabel>
+                          <Textarea
+                            onChange={(e) => {
+                              updateDetail(i, e.target.value, "description");
+                            }}
+                            value={detail.description ?? ""}
+                          />
+                        </FormItem>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end space-x-2 mt-4 pt-2">
           <Button variant="outline" type="button" onClick={() => setClose()}>
