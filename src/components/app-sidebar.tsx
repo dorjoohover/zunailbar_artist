@@ -57,81 +57,81 @@ export const sidebar_items = [
   {
     groupLabel: "Админ удирдлага",
     item: [
-      {
-        triggerLabel: "Хянах самбар",
-        url: "/",
-        // icon: GraphIcon,
-        icon: LayoutDashboard,
-      },
-      {
-        triggerLabel: "Ажилчид",
-        url: "",
-        icon: UsersRound,
-        children: [
-          {
-            title: "Ажилчдын удирдлага",
-            icon: SquareUserRound,
-            url: "/employees",
-          },
-          // {
-          //   title: "Ажилтан нэмэх",
-          //   icon: SquareUserRound,
-          //   id: MODAL_ACTION.add_emp,
-          // },
-          {
-            title: "Ажилчдад олгосон бүтээгдэхүүн",
-            icon: SquareUserRound,
-            url: "/employees/product",
-          },
-          {
-            title: "Ажилтны хийдэг үйлчилгээ",
-            icon: SquareUserRound,
-            url: "/employees/service",
-          },
-          {
-            title: "Ажилтны цалингийн түүх",
-            icon: SquareUserRound,
-            url: "/employees/salary",
-          },
-          {
-            title: "Ажилтны амралт",
-            icon: SquareUserRound,
-            url: "/employees/free",
-          },
-        ],
-      },
-      {
-        triggerLabel: "Бүтээгдэхүүн",
-        url: "",
-        icon: Milk,
-        children: [
-          {
-            title: "Бүтээгдэхүүний удирдлага",
-            url: "/products",
-            // icon: Milk,
-          },
-          {
-            title: "Бүтээгдэхүүний хэрэглээ",
-            url: "/products/transaction",
-            // icon: Milk,
-          },
-          {
-            title: "Худалдан авалт",
-            url: "/products/history",
-            // icon: Milk,
-          },
-          {
-            title: "Агуулах",
-            url: "/products/warehouse",
-            // icon: Milk,
-          },
-          {
-            title: "Хэрэглээний зардал",
-            url: "/products/cost",
-            // icon: Milk,
-          },
-        ],
-      },
+      // {
+      //   triggerLabel: "Хянах самбар",
+      //   url: "/",
+      //   // icon: GraphIcon,
+      //   icon: LayoutDashboard,
+      // },
+      // {
+      //   triggerLabel: "Ажилчид",
+      //   url: "",
+      //   icon: UsersRound,
+      //   children: [
+      //     {
+      //       title: "Ажилчдын удирдлага",
+      //       icon: SquareUserRound,
+      //       url: "/employees",
+      //     },
+      //     // {
+      //     //   title: "Ажилтан нэмэх",
+      //     //   icon: SquareUserRound,
+      //     //   id: MODAL_ACTION.add_emp,
+      //     // },
+      //     {
+      //       title: "Ажилчдад олгосон бүтээгдэхүүн",
+      //       icon: SquareUserRound,
+      //       url: "/employees/product",
+      //     },
+      //     {
+      //       title: "Ажилтны хийдэг үйлчилгээ",
+      //       icon: SquareUserRound,
+      //       url: "/employees/service",
+      //     },
+      //     {
+      //       title: "Ажилтны цалингийн түүх",
+      //       icon: SquareUserRound,
+      //       url: "/employees/salary",
+      //     },
+      //     {
+      //       title: "Ажилтны амралт",
+      //       icon: SquareUserRound,
+      //       url: "/employees/free",
+      //     },
+      //   ],
+      // },
+      // {
+      //   triggerLabel: "Бүтээгдэхүүн",
+      //   url: "",
+      //   icon: Milk,
+      //   children: [
+      //     {
+      //       title: "Бүтээгдэхүүний удирдлага",
+      //       url: "/products",
+      //       // icon: Milk,
+      //     },
+      //     {
+      //       title: "Бүтээгдэхүүний хэрэглээ",
+      //       url: "/products/transaction",
+      //       // icon: Milk,
+      //     },
+      //     {
+      //       title: "Худалдан авалт",
+      //       url: "/products/history",
+      //       // icon: Milk,
+      //     },
+      //     {
+      //       title: "Агуулах",
+      //       url: "/products/warehouse",
+      //       // icon: Milk,
+      //     },
+      //     {
+      //       title: "Хэрэглээний зардал",
+      //       url: "/products/cost",
+      //       // icon: Milk,
+      //     },
+      //   ],
+      // },
       {
         triggerLabel: "Захиалга",
         url: "",
@@ -142,158 +142,158 @@ export const sidebar_items = [
             url: "/orders",
             // icon: Milk,
           },
-          {
-            title: "Захиалгын лог",
-            url: "/order_logs",
-            // icon: Milk,
-          },
+          // {
+          //   title: "Захиалгын лог",
+          //   url: "/order_logs",
+          //   // icon: Milk,
+          // },
         ],
       },
 
-      {
-        triggerLabel: "Үйлчилгээ",
-        url: "",
-        icon: HandCoins,
-        children: [
-          {
-            title: "Үйлчилгээний удирдлага",
-            url: "/services",
-            // icon: Milk,
-          },
-          {
-            title: "Салбарын үйлчилгээ",
-            url: "/services/branch",
-            // icon: Milk,
-          },
-          {
-            title: "Үйлчилгээний урамшуулал",
-            url: "/services/discount",
-            // icon: Milk,
-          },
-        ],
-      },
-      {
-        triggerLabel: "Хэрэглэгчид",
-        url: "",
-        icon: Users,
-        children: [
-          {
-            title: "Хэрэглэгчдийн удирдлага",
-            url: "/users",
-            // icon: Milk,
-          },
-          {
-            title: "Хэрэглэгчийн хөнгөлөлт",
-            url: "/users/voucher",
-            // icon: Milk,
-          },
-        ],
-      },
-      {
-        triggerLabel: "Цагийн хуваарь",
-        url: "",
-        icon: CalendarRange,
-        children: [
-          {
-            title: "Цагийн хуваарийн удирдлага",
-            url: "/booking",
-            // icon: Milk,
-          },
-          {
-            title: "Ажилчдын цагийн хуваарь",
-            url: "/booking/employee",
-            // icon: Milk,
-          },
-          {
-            title: "Салбарын амралт",
-            url: "/booking/free",
-            // icon: Milk,
-          },
-        ],
-      },
+  //     {
+  //       triggerLabel: "Үйлчилгээ",
+  //       url: "",
+  //       icon: HandCoins,
+  //       children: [
+  //         {
+  //           title: "Үйлчилгээний удирдлага",
+  //           url: "/services",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Салбарын үйлчилгээ",
+  //           url: "/services/branch",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Үйлчилгээний урамшуулал",
+  //           url: "/services/discount",
+  //           // icon: Milk,
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       triggerLabel: "Хэрэглэгчид",
+  //       url: "",
+  //       icon: Users,
+  //       children: [
+  //         {
+  //           title: "Хэрэглэгчдийн удирдлага",
+  //           url: "/users",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Хэрэглэгчийн хөнгөлөлт",
+  //           url: "/users/voucher",
+  //           // icon: Milk,
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       triggerLabel: "Цагийн хуваарь",
+  //       url: "",
+  //       icon: CalendarRange,
+  //       children: [
+  //         {
+  //           title: "Цагийн хуваарийн удирдлага",
+  //           url: "/booking",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Ажилчдын цагийн хуваарь",
+  //           url: "/booking/employee",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Салбарын амралт",
+  //           url: "/booking/free",
+  //           // icon: Milk,
+  //         },
+  //       ],
+  //     },
 
-      {
-        triggerLabel: "Цалин",
-        url: "",
-        icon: Wallet,
-        children: [
-          {
-            title: "Цалингийн удирдлага",
-            url: "/salaries",
-            // icon: Milk,
-          },
-          {
-            title: "Цалингийн түүх",
-            url: "/salaries/pre",
-          },
-          {
-            title: "Танилын будалт",
-            url: "/salaries/friends",
-          },
-        ],
-      },
-    ],
-  },
+  //     {
+  //       triggerLabel: "Цалин",
+  //       url: "",
+  //       icon: Wallet,
+  //       children: [
+  //         {
+  //           title: "Цалингийн удирдлага",
+  //           url: "/salaries",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Цалингийн түүх",
+  //           url: "/salaries/pre",
+  //         },
+  //         {
+  //           title: "Танилын будалт",
+  //           url: "/salaries/friends",
+  //         },
+  //       ],
+  //     },
+  //   ],
+  // },
 
-  {
-    groupLabel: "Бусад",
-    item: [
-      {
-        label: "Үндсэн удирдлага",
-        triggerLabel: "Үндсэн",
-        url: "",
-        icon: SquareMenu,
-        children: [
-          {
-            title: "Ангилал удирдлага",
-            url: "/root/category",
-            // icon: Milk,
-          },
-          {
-            title: "Бренд удирдлага",
-            url: "/root/brand",
-            // icon: Milk,
-          },
-          {
-            title: "Агуулах удирдлага",
-            url: "/root/warehouse",
-            // icon: Milk,
-          },
-          {
-            title: "Хэрэглээний зардал",
-            url: "/root/cost",
-            // icon: Milk,
-          },
-          {
-            title: "Салбар удирдлага",
-            url: "/root/branch",
-            // icon: Milk,
-          },
-          {
-            title: "Үйлчилгээний ангилал удирдлага",
-            url: "/root/service-category",
-            // icon: Milk,
-          },
-        ],
-      },
-      {
-        label: "Сайтны удирдлага",
-        triggerLabel: "Сайт",
-        url: "",
-        icon: Globe,
-        children: [
-          {
-            title: "Нүүр зурагнууд",
-            url: "/root/home",
-            // icon: Milk,
-          },
-          {
-            title: "Давуу талууд",
-            url: "/root/feature",
-            // icon: Milk,
-          },
-        ],
-      },
+  // {
+  //   groupLabel: "Бусад",
+  //   item: [
+  //     {
+  //       label: "Үндсэн удирдлага",
+  //       triggerLabel: "Үндсэн",
+  //       url: "",
+  //       icon: SquareMenu,
+  //       children: [
+  //         {
+  //           title: "Ангилал удирдлага",
+  //           url: "/root/category",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Бренд удирдлага",
+  //           url: "/root/brand",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Агуулах удирдлага",
+  //           url: "/root/warehouse",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Хэрэглээний зардал",
+  //           url: "/root/cost",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Салбар удирдлага",
+  //           url: "/root/branch",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Үйлчилгээний ангилал удирдлага",
+  //           url: "/root/service-category",
+  //           // icon: Milk,
+  //         },
+  //       ],
+  //     },
+  //     {
+  //       label: "Сайтны удирдлага",
+  //       triggerLabel: "Сайт",
+  //       url: "",
+  //       icon: Globe,
+  //       children: [
+  //         {
+  //           title: "Нүүр зурагнууд",
+  //           url: "/root/home",
+  //           // icon: Milk,
+  //         },
+  //         {
+  //           title: "Давуу талууд",
+  //           url: "/root/feature",
+  //           // icon: Milk,
+  //         },
+  //       ],
+  //     },
       // {
       //   label: "Ажилчин",
       //   triggerLabel: "Ажилчин",
@@ -335,6 +335,7 @@ export function AppSidebar() {
   const { value, setValue } = useSidebarStore();
   // const [openIndex, setOpenIndex] = useState(null)
   if (pathname == "/login") return;
+  return
   return (
     <Sidebar
       variant="inset"

@@ -77,7 +77,7 @@ export const OrderPage = ({
       () => {
         void refresh();
       },
-      5 * 60 * 1000,
+      60 * 1000,
     );
 
     return () => clearInterval(interval);
@@ -95,6 +95,7 @@ export const OrderPage = ({
   };
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
+    console.log('first')
     const { page, limit, sort } = pg;
     const d = mnDate(filter?.date?.from);
     const end_date = mnDate(filter?.date?.to);

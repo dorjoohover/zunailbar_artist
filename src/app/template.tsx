@@ -35,10 +35,11 @@ export default function Template({
           cache: "no-store",
         });
         const data = await res.json();
+        console.log( data.payload.user.role)
         if (!res.ok) {
           // deleteCookie();
         } else {
-          data.payload.user.role > ROLE.ADMIN ? deleteCookie() : null;
+          data.payload.user.role != ROLE.MANAGER ? deleteCookie() : null;
         }
       } catch (error) {
         console.log("error", error);
@@ -50,7 +51,8 @@ export default function Template({
   useEffect(() => {
     me();
   }, [token]);
-
+  
+  if(pathname != '/orders') router.push('/orders')
   return (
     <div className="w-full max-w-screen">
       {pathname != "/login" && <SidebarTrigger />}
