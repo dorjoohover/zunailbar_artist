@@ -38,6 +38,16 @@ export function getColumns(
       ),
     },
     {
+      accessorKey: "customer_mobile",
+      header: ({ table }) => <span>Хэрэглэгчийн дугаар</span>,
+
+      cell: ({ row }) => (
+        <div>
+          <span> {mobileFormatter(row.getValue("customer_mobile") as string)}</span>
+        </div>
+      ),
+    },
+    {
       accessorKey: "changed_at",
       header: ({ table }) => <span>Огноо</span>,
 

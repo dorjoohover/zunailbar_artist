@@ -140,7 +140,6 @@ export default function SchedulerViewFilteration({
   useEffect(() => {
     setClientSide(true);
   }, []);
-
   const [isMobile, setIsMobile] = useState(
     clientSide ? window.innerWidth <= 768 : false,
   );
@@ -188,7 +187,7 @@ export default function SchedulerViewFilteration({
       role: ROLE.CLIENT,
       birthday: null,
     } as any);
-    
+
     if (res.success) {
       refresh({});
       setIsOPen(false);
@@ -209,17 +208,19 @@ export default function SchedulerViewFilteration({
       <div className="daily-weekly-monthly-selection relative w-full">
         <div className="flex items-center justify-between w-full gap-4 mb-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 w-full gap-2">
-            <label className="min-w-[150px]">
-              <span className="filter-label">Огноо</span>
+            {filter?.list && (
+              <label className="min-w-[150px]">
+                <span className="filter-label">Огноо</span>
 
-              <DatePicker
-                value={filter?.date}
-                mode="single"
-                onChange={(date) => setFilter("date", date as any)}
-                name=""
-                pl="Огноо сонгох"
-              />
-            </label>
+                <DatePicker
+                  value={filter?.date}
+                  mode="range"
+                  onChange={(date) => setFilter("date", date as any)}
+                  name=""
+                  pl="Огноо сонгох"
+                />
+              </label>
+            )}
             <label className="w-full maw-[300px] min-w-[150px]">
               <span className="filter-label">Салбар</span>
               <ComboBox
@@ -249,7 +250,7 @@ export default function SchedulerViewFilteration({
                   ref: () => null,
                   value: filter?.artist,
                 }}
-                items={values.user.map((item) => {
+                items={values.customer.map((item) => {
                   const [mobile, nickname] = item?.value?.split("__") ?? [
                     "",
                     "",
@@ -413,12 +414,13 @@ export default function SchedulerViewFilteration({
           </div>
         </div>
         <div className="divide-x-gray"></div>
+
         {filter?.list ? (
           <DataTable
             // clear={() => setFilter(undefined)}
-
+            limit={20}
             columns={columns}
-            count={orders?.count}
+            count={Number(orders?.count ?? "0")}
             data={orders?.items ?? []}
             refresh={refresh}
             loading={action == ACTION.RUNNING}

@@ -32,6 +32,7 @@ export type FilterType = {
   date?: DateRange;
   branch?: string;
   list?: boolean;
+  mobile?: string;
 };
 
 export const OrderPage = ({
@@ -77,7 +78,7 @@ export const OrderPage = ({
       () => {
         void refresh();
       },
-      60 * 1000,
+      5 * 60 * 1000,
     );
 
     return () => clearInterval(interval);
@@ -95,12 +96,11 @@ export const OrderPage = ({
   };
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    console.log('first')
     const { page, limit, sort } = pg;
     const d = mnDate(filter?.date?.from);
     const end_date = mnDate(filter?.date?.to);
-
     const date = dateFormat(d);
+    console.log(filter.date);
     await fetcher<Order>(Api.order, {
       page: page ?? DEFAULT_PG.page,
       limit: limit ?? DEFAULT_PG.limit,
@@ -110,10 +110,12 @@ export const OrderPage = ({
       order_status: filter?.status,
       user_id: filter?.artist,
       branch_id: filter?.branch,
-      friend: pg.filter?.status != OrderStatus.Friend ? undefined : 0,
+      friend: filter?.status != OrderStatus.Friend ? undefined : 0,
+      ...(pg.filter && { customer: pg.filter }),
       //   name: pg.filter,
     }).then((d) => {
       orderFormatter(d);
+      console.log(d);
     });
     setAction(ACTION.DEFAULT);
   };
@@ -214,6 +216,14 @@ export const OrderPage = ({
     );
   };
   const columns = getColumns(edit, deleteOrders);
+  useEffect(() => {
+    if (!filter?.list) {
+      refresh({});
+      setFilter({
+        list: filter?.list,
+      });
+    }
+  }, [filter?.list]);
   return (
     <div className="relative">
       <DynamicHeader count={orders?.count} />

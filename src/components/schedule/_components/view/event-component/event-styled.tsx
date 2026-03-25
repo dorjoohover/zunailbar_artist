@@ -122,8 +122,8 @@ export default function EventStyled({
     return userColor;
   };
 
-  const color = event?.details?.[0]?.user?.color;
-  const secondColor = event?.details?.[1]?.user?.color;
+  const color = event?.details?.[0]?.color;
+  const secondColor = event?.details?.[1]?.color;
   const level =
     getUserLevelValue[(event.customer?.level as UserLevel) ?? UserLevel.BRONZE];
   const ref = useRef(null);
@@ -223,17 +223,17 @@ export default function EventStyled({
                   <div
                     className="w-3 rounded-full h-3"
                     style={{
-                      backgroundColor: getBackgroundColor(e.user.color),
+                      backgroundColor: e.color ? getBackgroundColor(e.color) : '',
                     }}
                   ></div>
                   <div className="flex gap-2">
                     <p>Артист:</p>
-                    <p className="font-bold">{e.user.nickname}</p>
+                    <p className="font-bold">{e.nickname}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <p>Салбар:</p>
-                  <p className="font-bold">{e.user.branch_name}</p>
+                  <p className="font-bold">{e.branch_name}</p>
                 </div>
                 <div className="flex gap-2 ">
                   <p>Үйлчилгээний нэр:</p>

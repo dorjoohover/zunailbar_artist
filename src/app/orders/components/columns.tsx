@@ -39,14 +39,14 @@ export function getColumns(
       ),
     },
     {
-      accessorKey: "phone",
+      accessorKey: "customer",
       header: ({ table }) => <span>Утасны дугаар</span>,
-      cell: ({ row }) => (
-        <span className="">
+      cell: ({ row }) => {
+        return  <span className="">
           {" "}
-          {mobileFormatter(row.getValue("phone") ?? "")}
+          {mobileFormatter((row.getValue("customer") as any)?.mobile ?? "")}
         </span>
-      ),
+      }
     },
     {
       accessorKey: "order_date",

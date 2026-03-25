@@ -124,7 +124,6 @@ export function DataTable<TData, TValue>({
     //     })
     //   : (mounted.current = true);
   }, [pagination.pageIndex, pagination.pageSize, globalFilter]);
-
   const table = useReactTable({
     data,
     columns,
@@ -132,39 +131,22 @@ export function DataTable<TData, TValue>({
       globalFilter,
       pagination: pagination,
     },
-    pageCount: count,
+    pageCount: Math.ceil(count / limit),
     manualPagination: true,
     onPaginationChange,
     onGlobalFilterChange: (e) => {
-      console.log(e);
+      console.log(e, "filter");
       setGlobalFilter(e);
     },
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    // getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    // getFilteredRowModel: getFilteredRowModel(),
   });
 
   const totalPages = Math.ceil(count / limit);
   const currentPage = pagination.pageIndex;
 
-  function getPaginationRange() {
-    const start = Math.max(1, currentPage + 1 - 2);
-    const end = Math.min(totalPages, currentPage + 1 + 2);
-    let pages = [];
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    return pages;
-  }
-
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
-  const toggleRole = (role: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
-    );
-  };
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
   const downloadExcel = () => {
     if (excel) {
       excel({
@@ -175,21 +157,21 @@ export function DataTable<TData, TValue>({
     }
   };
 
-  const [width, setWidth] = useState(0);
+  // const [width, setWidth] = useState(0);
 
-  useEffect(() => {
-    // Handler to call on window resize
-    const handleResize = () => setWidth(window.innerWidth);
+  // useEffect(() => {
+  //   // Handler to call on window resize
+  //   const handleResize = () => setWidth(window.innerWidth);
 
-    // Set initial width
-    handleResize();
+  //   // Set initial width
+  //   handleResize();
 
-    // Listen for resize events
-    window.addEventListener("resize", handleResize);
+  //   // Listen for resize events
+  //   window.addEventListener("resize", handleResize);
 
-    // Cleanup listener on unmount
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  //   // Cleanup listener on unmount
+  //   return () => window.removeEventListener("resize", handleResize);
+  // }, []);
 
   const { open } = useSidebar();
 
