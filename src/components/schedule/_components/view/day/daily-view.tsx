@@ -382,6 +382,7 @@ export default function DailyView({
                 <AnimatePresence initial={false}>
                   {events && events?.length
                     ? events.map((event, eventIndex) => {
+                      
                         const group = orderMap.get(event.start_time) ?? []; // эсвэл orderMap[event.start_time]
                         const eventsInSamePeriod = group.length;
                         const periodIndex = group.findIndex(

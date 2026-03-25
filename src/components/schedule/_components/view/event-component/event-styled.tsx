@@ -97,6 +97,7 @@ export default function EventStyled({
   const { setOpen } = useModal();
 
   function handleEditEvent(event: IOrder) {
+    console.log(event.details, 'event')
     setOpen(
       <CustomModal title="Захиалга засах">
         <AddEventModal
@@ -306,23 +307,24 @@ export default function EventStyled({
       <div
         onClick={(e: React.MouseEvent<HTMLDivElement>) => {
           e.stopPropagation();
+          console.log(event)
           handleEditEvent({
             ...event,
-            id: event?.id,
-            branch_id: event.branch_id,
-            customer_id: event.customer_id,
-            user_id: event.user_id,
-            description: event.description,
-            order_status: event.order_status,
-            total_amount: event.total_amount ?? 0,
-            order_date: event.order_date,
-            start_time: event.start_time,
-            end_time: event.end_time,
-            details: event.details,
-            paid_amount: event.paid_amount,
-            pre_amount: event.pre_amount,
-            duration: event.duration,
-            is_pre_amount_paid: event.is_pre_amount_paid,
+            // id: event?.id,
+            // branch_id: event.branch_id,
+            // customer_id: event.customer_id,
+            // user_id: event.user_id,
+            // description: event.description,
+            // order_status: event.order_status,
+            // total_amount: event.total_amount ?? 0,
+            // order_date: event.order_date,
+            // start_time: event.start_time,
+            // end_time: event.end_time,
+            // details: event.details,
+            // paid_amount: event.paid_amount,
+            // pre_amount: event.pre_amount,
+            // duration: event.duration,
+            // is_pre_amount_paid: event.is_pre_amount_paid,
           });
         }}
         className="h-full"

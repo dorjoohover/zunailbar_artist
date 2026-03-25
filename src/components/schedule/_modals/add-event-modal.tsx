@@ -335,7 +335,6 @@ export default function AddEventModal({
   };
   const updateDetail = (index: number, value: any, key?: keyof DetailType) => {
     const current = form.getValues("details") || [];
-
     // Хэрвээ detail байхгүй бол шинэ item нэмнэ
     if (!current[index]) {
       form.setValue("details", [...current, value]);
@@ -367,12 +366,13 @@ export default function AddEventModal({
     duration,
   } = useWatch<EventFormData>({ control: form.control });
   const isDurationInitialized = useRef(false);
+  console.log(details)
+
   useEffect(() => {
     if (!values || !values?.id || !services.items.length) return;
 
     const mappedDetails = values?.details?.map((v: any) => {
       const service = services.items.find((s) => s.id === v.service_id);
-
       return {
         id: v.id,
         service_id: service?.id ?? "",
@@ -381,7 +381,7 @@ export default function AddEventModal({
         category_id: service?.category_id ?? "",
         description: v.description ?? "",
         price: v.price ?? 0,
-        user_id: v.user?.id ?? "",
+        user_id: v.user?.id ?? v.user_id ?? "",
       };
     });
 
@@ -403,7 +403,6 @@ export default function AddEventModal({
     const calculated = calculateDuration(details, parallel);
     getArtists();
     const current = Number(duration ?? 0);
-    console.log(current, calculated, current != calculated);
     if (orderDuration != undefined) {
       return;
     }
@@ -451,13 +450,11 @@ export default function AddEventModal({
       setServices(ListDefault);
       return;
     }
-    console.log("branch_id");
   }, [branchId]);
   useEffect(() => {
     if (!values?.id) return;
     isDurationInitialized.current = false;
 
-    console.log("reset");
     form.reset({
       ...values,
       edit: values.id,
@@ -475,10 +472,10 @@ export default function AddEventModal({
     const serviceTotal = sumPrices(details);
     const total =
       serviceTotal == 0
-        ? Number(pre_amount || 0) + Number(paid_amount || 0) 
+        ? Number(pre_amount || 0) + Number(paid_amount || 0)
         : serviceTotal;
     const currentTotal = total_amount || 0;
-    
+
     // 🔥 Loop-оос хамгаална
     if (currentTotal !== total) {
       form.setValue("total_amount", total, {
@@ -502,7 +499,6 @@ export default function AddEventModal({
       shouldTouch: false,
     });
   }, [start_time, duration]);
-  console.log(orderDuration, "duration");
   return (
     <form
       className="space-y-4 "
@@ -870,12 +866,11 @@ export default function AddEventModal({
             )}
           </div>
         </div>
-        {!order_date ||
-          (!slots?.[order_date] && (
-            <div className="flex justify-center col-span-2 py-4 m-2 rounded-md bg-primary/10 border border-primary/50">
-              <p className="text-sm">Цаг байхгүй.</p>
-            </div>
-          ))}
+        {(!order_date || !slots?.[order_date]) && isTimeSlotsEnabled && (
+          <div className="flex justify-center col-span-2 py-4 m-2 rounded-md bg-primary/10 border border-primary/50">
+            <p className="text-sm">Цаг байхгүй.</p>
+          </div>
+        )}
         {details?.length > 0 && (
           <div className="border-t">
             <div className="flex justify-between items-center">

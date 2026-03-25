@@ -100,7 +100,6 @@ export const OrderPage = ({
     const d = mnDate(filter?.date?.from);
     const end_date = mnDate(filter?.date?.to);
     const date = dateFormat(d);
-    console.log(filter.date);
     await fetcher<Order>(Api.order, {
       page: page ?? DEFAULT_PG.page,
       limit: limit ?? DEFAULT_PG.limit,
@@ -115,7 +114,6 @@ export const OrderPage = ({
       //   name: pg.filter,
     }).then((d) => {
       orderFormatter(d);
-      console.log(d);
     });
     setAction(ACTION.DEFAULT);
   };
@@ -134,6 +132,7 @@ export const OrderPage = ({
         };
       });
     }
+    console.log(payload)
     const res = edit
       ? await updateOne<Order>(
           Api.order,
@@ -188,7 +187,6 @@ export const OrderPage = ({
     } else {
       showToast("error", res.message);
     }
-    console.log(res);
     setAction(ACTION.DEFAULT);
   };
   const deleteOrders = async (index: number) => {

@@ -66,7 +66,7 @@ const defaultValues: UserType = {
 };
 type UserType = z.infer<typeof formSchema>;
 
-export default function SchedulerViewFilteration({
+export default function ({
   views = {
     views: ["day", "week", "month"],
     mobileViews: ["day"],

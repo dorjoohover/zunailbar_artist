@@ -298,7 +298,6 @@ export const SchedulerProvider = ({
 
     // Minimum height for visibility
     const minimumHeight = 50;
-    console.log(eventHeight);
     const height =
       eventHeight < minimumHeight
         ? Math.round(minimumHeight)
