@@ -194,14 +194,19 @@ export interface ListType<T> {
   count: number;
   items: T[];
 }
+export interface ScheduleDayData {
+  times: string[];
+  finish_time?: string | null;
+}
 export interface ScheduleData {
-  [day: number]: string[];
+  [day: number]: ScheduleDayData;
 }
 
 export interface SearchType<T> {
   id: string;
+  user_id?: string;
   value: string;
-  item?: T;
+  item?: T | string;
   quantity?: number;
 }
 

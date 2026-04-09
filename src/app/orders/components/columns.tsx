@@ -1,18 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { IProduct } from "@/models/product.model";
-import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { AppAlertDialog } from "@/components/AlertDialog";
-import { toast } from "sonner";
-import {
-  mnDateFormat,
-  mobileFormatter,
-  money,
-  parseDate,
-} from "@/lib/functions";
-import { IOrderDetail, IProductTransaction } from "@/models";
-import { OrderStatus, ProductTransactionStatus } from "@/lib/enum";
+import { mnDateFormat, mobileFormatter, money } from "@/lib/functions";
+import { IOrderDetail } from "@/models";
+import { OrderStatus } from "@/lib/enum";
 import { IOrder } from "@/models";
 import { TableActionButtons } from "@/components/tableActionButtons";
 import { OrderStatusValues } from "@/lib/constants";
@@ -31,7 +20,7 @@ export function getColumns(
       accessorKey: "details",
       header: ({ table }) => <span>Гарчиг</span>,
       cell: ({ row }) => (
-        <div className="font-semibold text-xs truncate mb-1">
+        <div className="font-semibold text-xs whitespace-normal break-words mb-1 max-w-[260px]">
           {(row.getValue("details") as IOrderDetail[])
             .map((e) => e.service_name)
             .join(",") || "Untitled Order"}
@@ -39,14 +28,28 @@ export function getColumns(
       ),
     },
     {
+      accessorKey: "artist",
+      header: () => <span>Артист</span>,
+      cell: ({ row }) => {
+        const details = (row.original.details ?? []) as Array<
+          IOrderDetail & { nickname?: string | null }
+        >;
+        const artists = Array.from(
+          new Set(details.map((detail) => detail.nickname).filter(Boolean)),
+        );
+
+        return <span>{artists.join(", ") || "-"}</span>;
+      },
+    },
+    {
       accessorKey: "customer",
       header: ({ table }) => <span>Утасны дугаар</span>,
       cell: ({ row }) => {
-        return  <span className="">
+        return <span className="">
           {" "}
           {mobileFormatter((row.getValue("customer") as any)?.mobile ?? "")}
-        </span>
-      }
+        </span>;
+      },
     },
     {
       accessorKey: "order_date",
@@ -89,6 +92,14 @@ export function getColumns(
           </span>
         </div>
       ),
+    },
+    {
+      accessorKey: "total_amount",
+      header: () => <span>Нийт төлбөр</span>,
+      cell: ({ row }) => {
+        const total = Number(row.getValue("total_amount") ?? 0);
+        return <span>{money(total.toString())}₮</span>;
+      },
     },
 
     {

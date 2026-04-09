@@ -1,5 +1,5 @@
 "use client";
-import { Branch, IOrder, Order, Service, User } from "@/models";
+import { Branch, IOrder, Order, Schedule, Service, User } from "@/models";
 import { useEffect, useRef, useState } from "react";
 import {
   ListType,
@@ -11,7 +11,7 @@ import {
 } from "@/lib/constants";
 import z from "zod";
 import { Api } from "@/utils/api";
-import { create, deleteOne, excel, find, updateOne } from "@/app/(api)";
+import { create, deleteOne, excel, find, search, updateOne } from "@/app/(api)";
 import { fetcher } from "@/hooks/fetcher";
 import SchedulerViewFilteration from "@/components/schedule/_components/view/schedular-view-filteration";
 import { SchedulerProvider } from "@/providers/schedular-provider";
@@ -25,6 +25,14 @@ import { Check } from "lucide-react";
 import { AppAlertDialog } from "@/components/AlertDialog";
 import { DateRange } from "react-day-picker";
 import { Slot } from "@/models/slot.model";
+
+const getTodayRange = (): DateRange => {
+  const today = mnDate(new Date());
+  return {
+    from: today,
+    to: today,
+  };
+};
 
 export type FilterType = {
   status?: OrderStatus;
@@ -40,28 +48,54 @@ export const OrderPage = ({
   users,
   customers,
   services,
+  initialFilter,
+  titleOverride,
+  showConfirmButton = true,
 }: {
   branches: SearchType<Branch>[];
   services: ListType<Service>;
   users: SearchType<User>[];
   customers: SearchType<User>[];
+  initialFilter?: FilterType;
+  titleOverride?: string;
+  showConfirmButton?: boolean;
 }) => {
   const [action, setAction] = useState(ACTION.DEFAULT);
   const [orders, setOrders] = useState<ListType<Order>>(ListDefault);
-  const [filter, setFilter] = useState<FilterType>({});
+  const [filter, setFilter] = useState<FilterType>({
+    date: getTodayRange(),
+    ...initialFilter,
+  });
+  const [artists, setArtists] = useState<SearchType<User>[]>(users);
   const changeFilter = (
     key: string,
-    value: number | string | undefined | boolean,
+    value: number | string | undefined | boolean | DateRange,
   ) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
   };
   const isFirstRender = useRef(true);
+  const getAristSchedules = async () => {
+    const date = mnDate(filter?.date?.from);
+    let index = date.getDay() - 1;
+    index = index == -1 ? 6 : index;
+    const schedule = await search<Schedule>(Api.schedule, { index });
+    const scheduleItems = schedule.data ?? [];
+    const scheduledUserIds = new Set(
+      scheduleItems.map((s) => s.user_id).filter(Boolean),
+    );
+
+    setArtists(
+      users
+        .filter((u) => scheduledUserIds.has(u.id))
+        .map((u) => ({
+          ...u,
+          item: scheduleItems.find((a) => a.user_id == u.id)?.value,
+        })),
+    );
+  };
   useEffect(() => {
-    // if (isFirstRender.current) {
-    //   isFirstRender.current = false;
-    //   return;
-    // }
     refresh();
+    getAristSchedules();
   }, [filter?.date, filter?.artist, filter?.branch, filter?.status]);
 
   const orderFormatter = (data: ListType<Order>) => {
@@ -97,8 +131,11 @@ export const OrderPage = ({
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
     const { page, limit, sort } = pg;
-    const d = mnDate(filter?.date?.from);
-    const end_date = mnDate(filter?.date?.to);
+    const selectedStart = filter?.date?.from ?? mnDate(new Date());
+    const selectedEnd =
+      filter?.date?.to ?? filter?.date?.from ?? mnDate(new Date());
+    const d = mnDate(selectedStart);
+    const end_date = mnDate(selectedEnd);
     const date = dateFormat(d);
     await fetcher<Order>(Api.order, {
       page: page ?? DEFAULT_PG.page,
@@ -132,7 +169,6 @@ export const OrderPage = ({
         };
       });
     }
-    console.log(payload)
     const res = edit
       ? await updateOne<Order>(
           Api.order,
@@ -162,12 +198,21 @@ export const OrderPage = ({
 
   const downloadExcel = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    const { page, limit, sort } = pg;
+    const selectedStart = filter?.date?.from ?? mnDate(new Date());
+    const selectedEnd =
+      filter?.date?.to ?? filter?.date?.from ?? mnDate(new Date());
+    const start = dateFormat(mnDate(selectedStart));
+    const end = dateFormat(mnDate(selectedEnd));
     const res = await excel(Api.order, {
-      page: page ?? DEFAULT_PG.page,
-      limit: limit ?? -1,
-      sort: sort ?? DEFAULT_PG.sort,
-      ...pg,
+      page: 0,
+      limit: -1,
+      sort: DEFAULT_PG.sort,
+      date: start,
+      end_date: filter?.list ? end : undefined,
+      order_status: filter?.status,
+      user_id: filter?.artist,
+      branch_id: filter?.branch,
+      friend: filter?.status != OrderStatus.Friend ? undefined : 0,
     });
     if (res.success && res.data) {
       const blob = new Blob([res.data], { type: "application/xlsx" });
@@ -197,34 +242,43 @@ export const OrderPage = ({
   };
   const edit = async (e: IOrder) => {
     // setOpen(true);
-    // console.log(e);
     // form.reset({ ...e, date: e.date?.toString().slice(0, 10), edit: e.id });
   };
 
   const confirmOrders = async () => {
-    // range tawij batalgaajuulna
-    const date = dateFormat(mnDate(filter?.date?.from));
-    const res = await find(Api.order, {}, `confirm/${date}`);
-    const success = res?.data?.count > 0;
+    const from = dateFormat(mnDate(filter?.date?.from ?? new Date()));
+    const to = dateFormat(
+      mnDate(filter?.date?.to ?? filter?.date?.from ?? new Date()),
+    );
+
+    setAction(ACTION.RUNNING);
+    const res = await find(Api.order, { from, to } as any, "confirm");
+    const processed = Number((res?.data as any)?.count ?? 0);
+    const success = processed > 0;
+
     showToast(
       success ? "success" : "info",
       success
-        ? `${res.data.count} захиалга баталгаажлаа`
-        : "Захиалга олдсонгүй",
+        ? from === to
+          ? `${from} өдрийн ${processed} захиалга бодогдлоо`
+          : `${from} - ${to} хоорондын ${processed} захиалга бодогдлоо`
+        : "Бодох захиалга олдсонгүй",
     );
+    await refresh({});
+    setAction(ACTION.DEFAULT);
   };
   const columns = getColumns(edit, deleteOrders);
   useEffect(() => {
-    if (!filter?.list) {
-      refresh({});
-      setFilter({
-        list: filter?.list,
-      });
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
+
+    refresh({});
   }, [filter?.list]);
   return (
     <div className="relative">
-      <DynamicHeader count={orders?.count} />
+      <DynamicHeader count={orders?.count} titleOverride={titleOverride} />
 
       <div className="admin-container relative">
         <div className="bg-white rounded-xl shadow-light border-light p-0 md:p-5">
@@ -240,6 +294,7 @@ export const OrderPage = ({
                 customer: customers,
                 service: services,
                 user: users,
+                artists: artists
               }}
               filter={filter}
               setFilter={changeFilter}
@@ -248,20 +303,26 @@ export const OrderPage = ({
               refresh={refresh}
             />
           </SchedulerProvider>
-          <div className="flex justify-end my-8">
-            <AppAlertDialog
-              onConfirm={confirmOrders}
-              title={`${dateFormat(
-                mnDate(filter?.date?.from),
-              )} өдрийн захиалгуудыг хаахдаа бэлэн байна уу`}
-              trigger={
-                <Button variant="default">
-                  <Check className="w-4 h-4 text-green-500" />
-                  Захиалга хаах
-                </Button>
-              }
-            />
-          </div>
+          {showConfirmButton && (
+            <div className="flex justify-end my-8">
+              <AppAlertDialog
+                onConfirm={confirmOrders}
+                title={`${dateFormat(
+                  mnDate(filter?.date?.from),
+                )}${
+                  filter?.date?.to
+                    ? ` - ${dateFormat(mnDate(filter?.date?.to))}`
+                    : ""
+                } хугацааны захиалгуудыг бодоход бэлэн байна уу`}
+                trigger={
+                  <Button variant="default" disabled={action == ACTION.RUNNING}>
+                    <Check className="w-4 h-4 text-green-500" />
+                    {action == ACTION.RUNNING ? "Бодож байна" : "Захиалга хаах"}
+                  </Button>
+                }
+              />
+            </div>
+          )}
 
           {/* <Button>Баталгаажуулах</Button> */}
         </div>

@@ -56,12 +56,12 @@ export const ServiceCategoryPage = ({
 
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    const { page, limit, sort } = pg;
+    const { page, limit, sort, filter: searchValue } = pg;
     await fetcher<ServiceCategory>(Api.service_category, {
       page,
       limit,
       sort,
-      //   name: pg.filter,
+      ...(searchValue && { name: searchValue }),
     }).then((d) => {
       setCategories(d);
     });

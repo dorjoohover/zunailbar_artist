@@ -7,5 +7,6 @@ export interface Slot {
   date: Date;
   start_time: Date;
   end_time: Date;
+  finish_time?: Date | string | null;
   key: string;
 }

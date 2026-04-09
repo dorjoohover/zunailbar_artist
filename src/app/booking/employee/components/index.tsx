@@ -21,6 +21,7 @@ import { ComboBox } from "@/shared/components/combobox";
 import { fetcher } from "@/hooks/fetcher";
 import {
   firstLetterUpper,
+  formatTime,
   mobileFormatter,
   numberArray,
   toTimeString,
@@ -59,6 +60,16 @@ const defaultValues: ScheduleType = {
   edit: undefined,
 };
 type ScheduleType = z.infer<typeof formSchema>;
+
+const toScheduleData = (items: Schedule[] = []): ScheduleData =>
+  items.reduce<ScheduleData>((acc, item) => {
+    acc[item.index] = {
+      times: item.times?.split("|") ?? [],
+      finish_time: item.finish_time ? formatTime(String(item.finish_time)) : null,
+    };
+    return acc;
+  }, {});
+
 export const SchedulePage = ({
   data,
   users,
@@ -120,21 +131,13 @@ export const SchedulePage = ({
   };
 
   useEffect(() => {
-    setScheduleData(
-      (schedules?.items || []).reduce<Record<number, string[]>>(
-        (acc, b: Schedule) => {
-          acc[b.index] = b.times?.split("|");
-          return acc;
-        },
-        {}
-      ) ?? {}
-    );
+    setScheduleData(toScheduleData(schedules?.items ?? []));
   }, [schedules?.items]);
-  const add = async (index: number, times: string[], isAdd: boolean) => {
+  const add = async (index: number, day: ScheduleData[number], isAdd: boolean) => {
     setAction(ACTION.RUNNING);
     const payload = {
       index: index,
-      times: times.length == 0 ? null : times,
+      times: day.times.length == 0 ? null : day.times,
       user_id: selectedUser.id,
     };
 
@@ -174,27 +177,22 @@ export const SchedulePage = ({
   };
   const updateSchedule = async (
     dayIndex: number,
-    times: string[],
+    day: ScheduleData[number],
     action: number
   ) => {
     if (action == 4) await remove(dayIndex);
-    if (action == 0) await add(dayIndex, times, !scheduleData[dayIndex]);
+    if (action == 0)
+      await add(dayIndex, day, !(scheduleData[dayIndex]?.times?.length ?? 0));
 
     if (action == 2)
       await add(
         dayIndex,
-        scheduleData[dayIndex],
-        !(schedules?.items || []).reduce<Record<number, string[]>>(
-          (acc, b: Schedule) => {
-            acc[b.index] = b.times?.split("|");
-            return acc;
-          },
-          {}
-        )[dayIndex]
+        day,
+        !(toScheduleData(schedules?.items ?? [])[dayIndex]?.times?.length ?? 0)
       );
     setScheduleData((prev) => ({
       ...prev,
-      [dayIndex]: times,
+      [dayIndex]: day,
     }));
   };
   return (
@@ -253,13 +251,15 @@ export const SchedulePage = ({
             data={schedules?.items ?? []}
             refresh={refresh}
             loading={action == ACTION.RUNNING}
+            search={false}
           />
         ) : (
           <div>
             <AdminScheduleManager
               schedule={scheduleData}
-              onUpdateSchedule={(dayIndex, times, action) =>
-                updateSchedule(dayIndex, times, action)
+              allowFinishTimeEdit={false}
+              onUpdateSchedule={(dayIndex, day, action) =>
+                updateSchedule(dayIndex, day, action)
               }
               loading={action != ACTION.DEFAULT}
             />

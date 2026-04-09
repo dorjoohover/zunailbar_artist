@@ -36,9 +36,17 @@ export function getColumns(
     },
     {
       accessorKey: "end_time",
-      header: "Дуусах цаг",
+      header: "Сүүлийн авах цаг",
       cell: ({ row }) => {
         const time = row.getValue("end_time") as string;
+        return time ? formatTime(time) : "-";
+      },
+    },
+    {
+      accessorKey: "finish_time",
+      header: "Тарах цаг",
+      cell: ({ row }) => {
+        const time = row.getValue("finish_time") as string;
         return time ? formatTime(time) : "-";
       },
     },

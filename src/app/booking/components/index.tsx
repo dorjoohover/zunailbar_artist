@@ -14,7 +14,7 @@ import { create, deleteOne, updateOne } from "@/app/(api)";
 import { fetcher } from "@/hooks/fetcher";
 import { AdminScheduleManager } from "@/components/layout/schedule.table";
 import DynamicHeader from "@/components/dynamicHeader";
-import { toTimeString } from "@/lib/functions";
+import { formatTime, toTimeString } from "@/lib/functions";
 import { showToast } from "@/shared/components/showToast";
 import { MapPin } from "lucide-react";
 import {
@@ -37,6 +37,15 @@ const defaultValues: BookingType = {
   edit: undefined,
 };
 type BookingType = z.infer<typeof formSchema>;
+
+const toScheduleData = (items: Booking[] = []): ScheduleData =>
+  items.reduce<ScheduleData>((acc, item) => {
+    acc[item.index] = {
+      times: item.times?.split("|") ?? [],
+      finish_time: item.finish_time ? formatTime(String(item.finish_time)) : null,
+    };
+    return acc;
+  }, {});
 
 export const BookingPage = ({
   data,
@@ -90,11 +99,11 @@ export const BookingPage = ({
     });
     setAction(ACTION.DEFAULT);
   };
-  const add = async (index: number, times: string[], isAdd: boolean) => {
+  const add = async (index: number, day: ScheduleData[number], isAdd: boolean) => {
     setAction(ACTION.RUNNING);
     const payload = {
       index: index,
-      times: times.length == 0 ? undefined : times.map((time) => time),
+      times: day.times.length == 0 ? undefined : day.times.map((time) => time),
       branch_id: selectedBranch.id,
     };
     console.log(payload);
@@ -135,39 +144,26 @@ export const BookingPage = ({
   }, [selectedBranch]);
   const [scheduleData, setScheduleData] = useState<ScheduleData>({});
   useEffect(() => {
-    const data =
-      (bookings?.items || []).reduce<Record<number, string[]>>(
-        (acc, b: Booking) => {
-          acc[b.index] = b.times?.split("|");
-          return acc;
-        },
-        {}
-      ) ?? {};
-    setScheduleData(data);
+    setScheduleData(toScheduleData(bookings?.items ?? []));
   }, [bookings?.items]);
   const updateBranchSchedule = async (
     dayIndex: number,
-    times: string[],
+    day: ScheduleData[number],
     action: number
   ) => {
     if (action == 4) await remove(dayIndex);
-    if (action == 0) await add(dayIndex, times, !scheduleData[dayIndex]);
+    if (action == 0)
+      await add(dayIndex, day, !(scheduleData[dayIndex]?.times?.length ?? 0));
     if (action == 2)
       await add(
         dayIndex,
-        scheduleData[dayIndex],
-        !(bookings?.items || []).reduce<Record<number, string[]>>(
-          (acc, b: Booking) => {
-            acc[b.index] = b.times?.split("|");
-            return acc;
-          },
-          {}
-        )[dayIndex]
+        day,
+        !(toScheduleData(bookings?.items ?? [])[dayIndex]?.times?.length ?? 0)
       );
 
     setScheduleData((prev) => ({
       ...prev,
-      [dayIndex]: times,
+      [dayIndex]: day,
     }));
   };
   return (
@@ -226,8 +222,9 @@ export const BookingPage = ({
         <div>
           <AdminScheduleManager
             schedule={scheduleData}
-            onUpdateSchedule={(dayIndex, times, action) =>
-              updateBranchSchedule(dayIndex, times, action)
+            allowFinishTimeEdit={false}
+            onUpdateSchedule={(dayIndex, day, action) =>
+              updateBranchSchedule(dayIndex, day, action)
             }
             loading={action != ACTION.DEFAULT}
           />

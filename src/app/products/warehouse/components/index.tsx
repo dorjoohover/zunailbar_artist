@@ -143,7 +143,7 @@ export const ProductWarehousePage = ({
 
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    const { page, limit, sort } = pg;
+    const { page, limit, sort, filter: searchValue } = pg;
     const warehouse_id = filter?.warehouse;
     const product_id = filter?.product;
     const start_date = filter?.start ? dateOnly(filter?.start) : undefined;
@@ -156,7 +156,7 @@ export const ProductWarehousePage = ({
       product_id,
       start_date,
       end_date,
-      ...pg,
+      ...(searchValue && { name: searchValue }),
     }).then((d) => {
       productWarehouseFormatter(d);
     });

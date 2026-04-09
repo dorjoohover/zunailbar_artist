@@ -26,7 +26,12 @@ import { getColumns } from "./columns";
 import DynamicHeader from "@/components/dynamicHeader";
 import { INPUT_TYPE, SalaryLogStatus } from "@/lib/enum";
 import { ISalaryLog, SalaryLog, User } from "@/models";
-import { firstLetterUpper, mnDate, usernameFormatter } from "@/lib/functions";
+import {
+  firstLetterUpper,
+  mnDate,
+  mnDateFormat,
+  usernameFormatter,
+} from "@/lib/functions";
 import { DatePicker } from "@/shared/components/date.picker";
 import { showToast } from "@/shared/components/showToast";
 
@@ -63,6 +68,21 @@ const defaultValues = {
   edit: undefined,
 };
 type SalaryType = z.infer<typeof formSchema>;
+
+const toFormDate = (value: Date | string) => {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (!value) {
+    return new Date();
+  }
+
+  return new Date(
+    value.includes("T") ? value : `${value}T00:00:00`,
+  );
+};
+
 export const SalaryPage = ({
   data,
   users,
@@ -85,7 +105,11 @@ export const SalaryPage = ({
   };
   const edit = async (e: ISalaryLog) => {
     setOpen(true);
-    form.reset({ ...e, edit: e.id });
+    form.reset({
+      ...e,
+      date: toFormDate(e.date),
+      edit: e.id,
+    });
   };
   const userMap = useMemo(
     () => new Map(users.items.map((b) => [b.id, b])),
@@ -126,18 +150,22 @@ export const SalaryPage = ({
     setAction(ACTION.RUNNING);
     const body = e as SalaryType;
     const { edit, user_name, ...payload } = body;
+    const requestBody = {
+      ...payload,
+      date: mnDateFormat(body.date as Date),
+    } as unknown as ISalaryLog;
 
     const res = edit
       ? await updateOne<ISalaryLog>(
           Api.integration,
           edit ?? "",
-          payload as unknown as ISalaryLog,
+          requestBody,
         )
-      : await create<ISalaryLog>(Api.integration, e as ISalaryLog);
+      : await create<ISalaryLog>(Api.integration, requestBody);
     if (res.success) {
       refresh();
       setOpen(false);
-      form.reset({});
+      form.reset(defaultValues);
     }
     setAction(ACTION.DEFAULT);
   };

@@ -64,7 +64,13 @@ export function getColumns(
       accessorKey: "date",
       header: "Огноо",
       cell: ({ row }) => {
-        const date = parseDate(new Date(row.getValue("date")), false);
+        const value = row.getValue("date") as string | Date;
+        const date = parseDate(
+          value instanceof Date
+            ? value
+            : new Date(value.includes("T") ? value : `${value}T00:00:00`),
+          false,
+        );
         return date;
       },
     },

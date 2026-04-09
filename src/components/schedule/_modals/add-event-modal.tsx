@@ -38,7 +38,7 @@ import {
 import { TextField } from "@/shared/components/text.field";
 import { showToast } from "@/shared/components/showToast";
 import { API, Api } from "@/utils/api";
-import { create, find, search } from "@/app/(api)";
+import { create, find, findOne, search } from "@/app/(api)";
 import { Textarea } from "@/components/ui/textarea";
 import { FormItem, FormLabel } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -100,6 +100,7 @@ export default function AddEventModal({
   items: {
     branch: SearchType<Branch>[];
     customer: SearchType<User>[];
+    artists: SearchType<User>[];
     user: SearchType<User>[];
     service: ListType<Service>;
   };
@@ -258,6 +259,10 @@ export default function AddEventModal({
     count: 0,
     items: [],
   });
+  const [customerVisitCount, setCustomerVisitCount] = useState<number | null>(
+    null,
+  );
+  const [isCustomerCountLoading, setIsCustomerCountLoading] = useState(false);
   const [orderDuration, setDuration] = useState(undefined);
   const [userService, setUserService] = useState<OrderSlot>({});
   const [slots, setSlots] = useState<Record<string, Slot[]>>({});
@@ -315,6 +320,7 @@ export default function AddEventModal({
 
     setClose();
   };
+
   const onInvalid = async <T,>(e: T) => {
     const error = Object.entries(e as any)
       .map(([er, v], i) => {
@@ -366,7 +372,6 @@ export default function AddEventModal({
     duration,
   } = useWatch<EventFormData>({ control: form.control });
   const isDurationInitialized = useRef(false);
-  console.log(details)
 
   useEffect(() => {
     if (!values || !values?.id || !services.items.length) return;
@@ -377,7 +382,7 @@ export default function AddEventModal({
         id: v.id,
         service_id: service?.id ?? "",
         service_name: service?.name ?? "",
-        duration: Number(service?.duration ?? 0),
+        duration: Number(v?.duration ?? service?.duration ?? 0),
         category_id: service?.category_id ?? "",
         description: v.description ?? "",
         price: v.price ?? 0,
@@ -436,6 +441,39 @@ export default function AddEventModal({
     };
   }, [customerId]);
   useEffect(() => {
+    let cancelled = false;
+
+    const loadCustomerVisitCount = async () => {
+      if (!customerId) {
+        setCustomerVisitCount(null);
+        return;
+      }
+
+      setIsCustomerCountLoading(true);
+
+      try {
+        const res = await findOne(Api.order, customerId, "customer_count");
+        if (!cancelled) {
+          setCustomerVisitCount(Number(res?.payload?.count ?? 0));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCustomerVisitCount(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCustomerCountLoading(false);
+        }
+      }
+    };
+
+    loadCustomerVisitCount();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId]);
+  useEffect(() => {
     if (branchId) {
       listField<Service>({
         api: Api.service,
@@ -451,6 +489,21 @@ export default function AddEventModal({
       return;
     }
   }, [branchId]);
+  useEffect(() => {
+    if (values?.id) return;
+
+    form.reset({
+      ...defaultValues,
+      ...values,
+      details: values?.details ?? defaultValues.details,
+      order_date: values?.order_date ?? defaultValues.order_date,
+      start_time: values?.start_time ?? defaultValues.start_time,
+      total_amount: values?.total_amount ?? defaultValues.total_amount,
+      pre_amount: values?.pre_amount ?? defaultValues.pre_amount,
+      paid_amount: values?.paid_amount ?? defaultValues.paid_amount,
+    });
+  }, [values, form]);
+
   useEffect(() => {
     if (!values?.id) return;
     isDurationInitialized.current = false;
@@ -527,36 +580,50 @@ export default function AddEventModal({
       <FormProvider {...form}>
         <div className="double-col">
           <div className="flex gap-4 items-start col-span-2">
-            <FormItems
-              control={form.control}
-              name="customer_id"
-              label="Хэрэглэгч"
-              className=" flex-1"
-            >
-              {(field) => {
-                return (
-                  <ComboBox
-                    search={(v) => {
-                      if (v.length > 1) searchField(v, Api.customer);
-                    }}
-                    props={{ ...field }}
-                    items={allItems.customer.map((item) => {
-                      const [mobile, nickname] = item?.value?.split("__") ?? [
-                        "",
-                        "",
-                        "",
-                        "",
-                      ];
-                      const name = nickname == "null" ? "" : (nickname ?? "");
-                      return {
-                        value: item.id,
-                        label: `${mobileFormatter(mobile)} ${name}`,
-                      };
-                    })}
-                  />
-                );
-              }}
-            </FormItems>
+            <div className="flex-1 space-y-2">
+              <FormItems
+                control={form.control}
+                name="customer_id"
+                label="Хэрэглэгч"
+                className=" flex-1"
+              >
+                {(field) => {
+                  return (
+                    <ComboBox
+                      search={(v) => {
+                        if (v.length > 1) searchField(v, Api.customer);
+                      }}
+                      props={{ ...field }}
+                      items={allItems.customer.map((item) => {
+                        const [mobile, nickname] = item?.value?.split("__") ?? [
+                          "",
+                          "",
+                          "",
+                          "",
+                        ];
+                        const name = nickname == "null" ? "" : (nickname ?? "");
+                        return {
+                          value: item.id,
+                          label: `${mobileFormatter(mobile)} ${name}`,
+                        };
+                      })}
+                    />
+                  );
+                }}
+              </FormItems>
+              {customerId && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  {isCustomerCountLoading ? (
+                    <span>Үйлчлүүлсэн тоог уншиж байна...</span>
+                  ) : (
+                    <span>
+                      Нийт үйлчлүүлсэн:{" "}
+                      <b>{customerVisitCount ?? 0} удаа</b>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             <FormItems
               control={form.control}
               name="description"
@@ -805,20 +872,7 @@ export default function AddEventModal({
             </FormItems>
             {details?.length > 0 && (
               <FormItems control={form.control} name="duration" label="Хугацаа">
-                {(field) => {
-                  return (
-                    <TextField
-                      type={INPUT_TYPE.NUMBER}
-                      props={{
-                        ...field,
-                        onChange: (e) => {
-                          field.onChange(e);
-                          setDuration(e);
-                        },
-                      }}
-                    />
-                  );
-                }}
+                {(field) => <TextField props={{ ...field }} disabled={true} />}
               </FormItems>
             )}
             {((order_date && slots?.[order_date]) || !isTimeSlotsEnabled) && (
@@ -974,6 +1028,26 @@ export default function AddEventModal({
                                 onBlur: () => {},
                                 ref: () => {},
                                 value: detail?.price ?? "",
+                              }}
+                            />
+                          </FormItem>
+                          <FormItem>
+                            <FormLabel>Хугацаа</FormLabel>
+                            <TextField
+                              type={INPUT_TYPE.NUMBER}
+                              props={{
+                                onChange: (v: string) => {
+                                  const value = parseInt(v);
+                                  updateDetail(
+                                    i,
+                                    isNaN(value) ? 0 : value,
+                                    "duration",
+                                  );
+                                },
+                                name: "",
+                                onBlur: () => {},
+                                ref: () => {},
+                                value: detail?.duration ?? "",
                               }}
                             />
                           </FormItem>

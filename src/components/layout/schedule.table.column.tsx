@@ -1,30 +1,33 @@
-import { useEffect, useState } from "react";
-import { Plus, Copy, RotateCcw, Edit3, Check } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Copy, RotateCcw, Edit3, Check } from "lucide-react";
+import { ScheduleDayData } from "@/lib/constants";
 import { TimeSlotPill } from "./schedule.table.time.slot";
-import { AddTimeModal } from "./schedule.add.time";
 import { LoaderMini } from "../loader";
+import { AppAlertDialog } from "@/components/AlertDialog";
 
 interface DayScheduleColumnProps {
   dayName: string;
   dayIndex: number;
   loading: boolean;
-  times: string[];
-  onUpdateTimes: (times: string[], action: number) => void;
+  day: ScheduleDayData;
+  allowFinishTimeEdit?: boolean;
+  onUpdateDay: (day: ScheduleDayData, action: number) => void;
   onCopyPrevious?: () => void;
 }
 
 export function DayScheduleColumn({
   dayName,
   loading,
-  times,
-  onUpdateTimes,
+  day,
+  allowFinishTimeEdit = true,
+  onUpdateDay,
   onCopyPrevious,
 }: DayScheduleColumnProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [send, setSend] = useState(false);
-  const [showAddTime, setShowAddTime] = useState(false);
+  const times = day.times ?? [];
+  const finishTime = day.finish_time ?? null;
 
-  // All possible full-hour times from 07:00 to 22:00
   const allAvailableTimes = Array.from({ length: 32 }, (_, i) => {
     const index = i * 0.5;
     const hour = index + 7;
@@ -32,41 +35,61 @@ export function DayScheduleColumn({
       hour % 1 == 0 ? "00" : "30"
     }`;
   });
+  const timeToDecimal = (value: string) => {
+    const [hours, minutes = "0"] = value.split(":");
+    return Number(hours) + Number(minutes) / 60;
+  };
+
+  const decimalToTime = (value: number) => {
+    const hours = Math.floor(value);
+    const minutes = value % 1 === 0 ? "00" : "30";
+    return `${hours.toString().padStart(2, "0")}:${minutes}`;
+  };
+
+  const normalizeDay = (nextTimes: string[], nextFinishTime?: string | null) => {
+    if (nextTimes.length === 0) {
+      return { times: [], finish_time: null };
+    }
+
+    const sortedTimes = [...nextTimes].sort();
+    const lastStart = Math.max(...sortedTimes.map(timeToDecimal));
+    const minimumFinish = decimalToTime(lastStart + 0.5);
+    const resolvedFinish = allowFinishTimeEdit
+      ? nextFinishTime && timeToDecimal(nextFinishTime) > lastStart
+        ? nextFinishTime
+        : minimumFinish
+      : nextFinishTime ?? null;
+
+    return {
+      times: sortedTimes,
+      finish_time: resolvedFinish,
+    };
+  };
+
+  const minimumFinishTime = useMemo(() => {
+    if (times.length === 0) return "";
+    const lastStart = Math.max(...times.map(timeToDecimal));
+    return decimalToTime(lastStart + 0.5);
+  }, [times]);
 
   const toggleTime = (time: string) => {
     if (times.includes(time)) {
-      onUpdateTimes(
-        times.filter((t) => t !== time),
-        1
-      );
+      onUpdateDay(normalizeDay(times.filter((t) => t !== time), finishTime), 1);
     } else {
-      // Add and sort
-      const newTimes = [...times, time].sort();
-      onUpdateTimes(newTimes, 1);
-    }
-  };
-
-  const addTime = (time: string) => {
-    if (!times.includes(time)) {
-      const newTimes = [...times, time].sort();
-      onUpdateTimes(newTimes, 0);
+      onUpdateDay(normalizeDay([...times, time], finishTime), 1);
     }
   };
 
   const resetDay = () => {
-    onUpdateTimes([], 4);
+    onUpdateDay({ times: [], finish_time: null }, 4);
   };
-
-  const availableTimesToAdd = allAvailableTimes.filter(
-    (t) => !times.includes(t)
-  );
 
   useEffect(() => {
     if (send) {
-      onUpdateTimes([], 2);
+      onUpdateDay(normalizeDay(times, finishTime), 2);
       setSend(false);
     }
-  }, [send]);
+  }, [send, times, finishTime]);
 
   return (
     <div className="flex flex-col border border-slate-200 rounded-xl p-4 bg-slate-50/50 hover:shadow-md transition-shadow">
@@ -85,24 +108,56 @@ export function DayScheduleColumn({
             <LoaderMini />
           </div>
         ) : isEditMode ? (
-          // Edit mode: show all possible times as toggles
-          <div className="space-y-1.5">
-            {allAvailableTimes.map((time) => (
-              <button
-                key={time}
-                onClick={() => toggleTime(time)}
-                className={`w-full px-3 py-2 rounded-lg text-sm transition-all ${
-                  times.includes(time)
-                    ? "bg-teal-500 hover:bg-teal-600 text-white shadow-sm"
-                    : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200"
-                }`}
-              >
-                {time}
-              </button>
-            ))}
+          <div className="space-y-3">
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <label className="mb-2 block text-[11px] text-slate-500">
+                Тарах цаг
+              </label>
+              {allowFinishTimeEdit ? (
+                <input
+                  type="time"
+                  step={1800}
+                  min={minimumFinishTime || undefined}
+                  max="23:00"
+                  value={finishTime ?? ""}
+                  onChange={(event) =>
+                    onUpdateDay(
+                      normalizeDay(times, event.target.value || null),
+                      1,
+                    )
+                  }
+                  disabled={times.length === 0}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none"
+                />
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  {finishTime ?? "Admin оноогоогүй"}
+                </div>
+              )}
+              <p className="mt-2 text-[11px] leading-4 text-slate-500">
+                {allowFinishTimeEdit
+                  ? `Энэ цаг нь үйлчилгээ хамгийн оройдоо хэдэн цагт дуусахыг заана. Хамгийн багадаа ${minimumFinishTime || "--"} байна.`
+                  : "Тарах цагийг зөвхөн admin талаас онооно."}
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              {allAvailableTimes.map((time) => (
+                <button
+                  key={time}
+                  onClick={() => toggleTime(time)}
+                  className={`w-full px-3 py-2 rounded-lg text-sm transition-all ${
+                    times.includes(time)
+                      ? "bg-teal-500 hover:bg-teal-600 text-white shadow-sm"
+                      : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200"
+                  }`}
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
-          // View mode: show only active times
           <>
             {times.length === 0 ? (
               <div className="text-slate-400 text-sm text-center py-8">
@@ -117,13 +172,20 @@ export function DayScheduleColumn({
                 />
               ))
             )}
+            {times.length > 0 && (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                <div>Сүүлийн авах цаг: {times[times.length - 1]}</div>
+                <div>
+                  Тарах цаг:{" "}
+                  {finishTime ?? (allowFinishTimeEdit ? "-" : "Admin оноогоогүй")}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
 
-      {/* Actions */}
       <div className="space-y-2 pt-3 border-t border-slate-200">
-        {/* Edit mode toggle */}
         <button
           onClick={() => {
             if (isEditMode) setSend(true);
@@ -141,18 +203,6 @@ export function DayScheduleColumn({
 
         {!isEditMode && (
           <>
-            {/* Add time */}
-            {availableTimesToAdd.length > 0 && (
-              <button
-                onClick={() => setShowAddTime(true)}
-                className="w-full flex text-xs items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-colors"
-              >
-                <Plus size={14} />
-                <span>Цаг нэмэх</span>
-              </button>
-            )}
-
-            {/* Copy previous day */}
             {onCopyPrevious && (
               <button
                 onClick={onCopyPrevious}
@@ -164,28 +214,23 @@ export function DayScheduleColumn({
               </button>
             )}
 
-            {/* Reset */}
             {times.length > 0 && (
-              <button
-                onClick={resetDay}
-                className="w-full flex items-center text-sm justify-center gap-2 px-3 py-2 bg-white hover:bg-red-50 text-red-600 border border-slate-200 hover:border-red-200 rounded-lg text-xs transition-colors"
-              >
-                <RotateCcw size={12} />
-                <span>Цэвэрлэх</span>
-              </button>
+              <AppAlertDialog
+                title="Энэ өдрийн хуваарийг цэвэрлэх үү?"
+                description="Сонгосон цагууд болон тарах цаг хоёулаа устна."
+                confirmText="Цэвэрлэх"
+                trigger={
+                  <button className="w-full flex items-center text-sm justify-center gap-2 px-3 py-2 bg-white hover:bg-red-50 text-red-600 border border-slate-200 hover:border-red-200 rounded-lg text-xs transition-colors">
+                    <RotateCcw size={12} />
+                    <span>Цэвэрлэх</span>
+                  </button>
+                }
+                onConfirm={resetDay}
+              />
             )}
           </>
         )}
       </div>
-
-      {/* Add Time Modal */}
-      {showAddTime && (
-        <AddTimeModal
-          availableTimes={availableTimesToAdd}
-          onSelectTime={addTime}
-          onClose={() => setShowAddTime(false)}
-        />
-      )}
     </div>
   );
 }

@@ -186,7 +186,7 @@ export const ProductHistoryPage = ({
 
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    const { page, limit, sort } = pg;
+    const { page, limit, sort, filter: searchValue } = pg;
     const product_id = filter?.product;
     const product_log_status = filter?.status;
     const start_date = filter?.start ? dateOnly(filter?.start) : undefined;
@@ -199,8 +199,7 @@ export const ProductHistoryPage = ({
       product_log_status,
       start_date,
       end_date,
-      ...pg,
-      //   name: pg.filter,
+      ...(searchValue && { name: searchValue }),
     }).then((d) => {
       logFormatter(d);
     });

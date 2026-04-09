@@ -1,16 +1,21 @@
 import { useMemo } from "react";
+import { ScheduleData, ScheduleDayData } from "@/lib/constants";
 import { DayScheduleColumn } from "./schedule.table.column";
 interface AdminScheduleManagerProps {
-  schedule: {
-    [day: number]: string[];
-  };
+  schedule: ScheduleData;
   loading: boolean;
-  onUpdateSchedule: (dayIndex: number, times: string[], action: number) => void;
+  allowFinishTimeEdit?: boolean;
+  onUpdateSchedule: (
+    dayIndex: number,
+    day: ScheduleDayData,
+    action: number,
+  ) => void;
 }
 
 export function AdminScheduleManager({
   schedule,
   loading,
+  allowFinishTimeEdit = true,
   onUpdateSchedule,
 }: AdminScheduleManagerProps) {
   const dayNames = [
@@ -37,8 +42,18 @@ export function AdminScheduleManager({
   }, []);
   const copyPreviousDay = (dayIndex: number) => {
     if (dayIndex === 0) return;
-    const previousDaySchedule = schedule[dayIndex - 1] || [];
-    onUpdateSchedule(dayIndex, [...previousDaySchedule], 0);
+    const previousDaySchedule = schedule[dayIndex - 1] || {
+      times: [],
+      finish_time: null,
+    };
+    onUpdateSchedule(
+      dayIndex,
+      {
+        times: [...previousDaySchedule.times],
+        finish_time: previousDaySchedule.finish_time ?? null,
+      },
+      0,
+    );
   };
 
   return (
@@ -50,9 +65,10 @@ export function AdminScheduleManager({
             key={index}
             dayName={day.dayName}
             dayIndex={index}
-            times={schedule[index] || []}
-            onUpdateTimes={(times, action) =>
-              onUpdateSchedule(index, times, action)
+            allowFinishTimeEdit={allowFinishTimeEdit}
+            day={schedule[index] || { times: [], finish_time: null }}
+            onUpdateDay={(value, action) =>
+              onUpdateSchedule(index, value, action)
             }
             onCopyPrevious={
               index > 0 ? () => copyPreviousDay(index) : undefined

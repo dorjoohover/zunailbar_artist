@@ -2,7 +2,7 @@ export interface ISalaryLog {
   id: string;
   artist_id: string;
   approved_by: string;
-  date: Date;
+  date: Date | string;
   amount: number;
   salary_status: number;
   order_count: number;
@@ -14,7 +14,7 @@ export interface SalaryLog {
   id: string;
   artist_id: string;
   approved_by: string;
-  date: Date;
+  date: Date | string;
   amount: number;
   salary_status: number;
   status: number;

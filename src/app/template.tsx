@@ -3,8 +3,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ROLE } from "@/lib/enum";
 import { API } from "@/utils/api";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import Loading from "./loading";
+import { useEffect } from "react";
 
 export default function Template({
   children,
@@ -21,7 +20,7 @@ export default function Template({
         await fetch("/api/logout").then((d) => router.push("/login"));
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
   const me = async () => {
@@ -35,24 +34,30 @@ export default function Template({
           cache: "no-store",
         });
         const data = await res.json();
-        console.log( data.payload.user.role)
         if (!res.ok) {
           // deleteCookie();
         } else {
-          data.payload.user.role != ROLE.MANAGER ? deleteCookie() : null;
+          if (data.payload.user.role != ROLE.MANAGER) {
+            void deleteCookie();
+          }
         }
       } catch (error) {
-        console.log("error", error);
+        console.error("error", error);
         // deleteCookie();
       }
     }
   };
 
   useEffect(() => {
-    me();
+    void me();
   }, [token]);
-  
-  if(pathname != '/orders') router.push('/orders')
+
+  useEffect(() => {
+    if (pathname !== "/login" && pathname !== "/orders") {
+      router.replace("/orders");
+    }
+  }, [pathname, router]);
+
   return (
     <div className="w-full max-w-screen">
       {pathname != "/login" && <SidebarTrigger />}

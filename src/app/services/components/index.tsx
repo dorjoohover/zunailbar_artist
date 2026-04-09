@@ -158,14 +158,14 @@ export const ServicePage = ({
 
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    const { page, limit, sort } = pg;
+    const { page, limit, filter: searchValue } = pg;
     const category_id = filter?.category;
     await fetcher<Service>(Api.service, {
       page: page ?? DEFAULT_PG.page,
       limit: limit ?? DEFAULT_PG.limit,
       sort: false,
       category_id,
-      ...pg,
+      ...(searchValue && { name: searchValue }),
     }).then((d) => {
       serviceFormatter(d);
     });

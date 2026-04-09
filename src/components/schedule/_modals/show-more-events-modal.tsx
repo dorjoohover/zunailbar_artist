@@ -6,7 +6,6 @@ import { IOrder } from "@/models";
 
 export default function ShowMoreEventsModal() {
   const { data } = useModal();
-  console.log(data);
   const dayEvents = data?.default?.dayEvents || [];
 
   const [events, setEvents] = useState<IOrder[]>(dayEvents);

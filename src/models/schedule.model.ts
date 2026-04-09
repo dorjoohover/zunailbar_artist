@@ -11,6 +11,7 @@ export interface ISchedule {
   index: number;
   start_time?: Date;
   end_time?: Date;
+  finish_time?: Date | string | null;
   times?: string[] | null;
   schedule_status?: number;
   created_at?: Date;
@@ -25,6 +26,7 @@ export interface Schedule {
   index: number;
   start_time: Date;
   end_time: Date;
+  finish_time?: Date | string | null;
   schedule_status: number;
   times: string;
   created_at?: Date;
@@ -39,6 +41,7 @@ export interface IBooking {
   index: number;
   start_time?: Date;
   end_time?: Date;
+  finish_time?: Date | string | null;
   booking_status?: number;
   times?: string[];
   created_at?: Date;
@@ -52,6 +55,7 @@ export interface Booking {
   index: number;
   start_time: Date;
   end_time: Date;
+  finish_time?: Date | string | null;
   booking_status: number;
   times: string;
   created_at?: Date;

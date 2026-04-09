@@ -125,12 +125,12 @@ export const VoucherPage = ({
 
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
-    const { page, limit, sort } = pg;
+    const { page, limit, sort, filter: searchValue } = pg;
     await fetcher<Voucher>(Api.voucher, {
       page,
       limit,
       sort,
-      //   name: pg.filter,
+      ...(searchValue && { name: searchValue }),
     }).then((d) => {
       voucherFormatter(d);
       console.log(d);

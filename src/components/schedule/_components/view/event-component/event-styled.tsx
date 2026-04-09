@@ -11,6 +11,10 @@ import {
   User as LUser,
   UserCircle,
   Phone,
+  Pencil,
+  ChevronDown,
+  ChevronUp,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CustomModal from "@/components/ui/custom-modal";
@@ -85,6 +89,7 @@ export default function EventStyled({
   values: {
     branch: SearchType<Branch>[];
     customer: SearchType<User>[];
+    artists: SearchType<User>[];
     user: SearchType<User>[];
     service: ListType<Service>;
   };
@@ -97,7 +102,6 @@ export default function EventStyled({
   const { setOpen } = useModal();
 
   function handleEditEvent(event: IOrder) {
-    console.log(event.details, 'event')
     setOpen(
       <CustomModal title="Захиалга засах">
         <AddEventModal
@@ -127,76 +131,121 @@ export default function EventStyled({
   const secondColor = event?.details?.[1]?.color;
   const level =
     getUserLevelValue[(event.customer?.level as UserLevel) ?? UserLevel.BRONZE];
-  const ref = useRef(null);
-  const [hovered, setHovered] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const hour = +(event.start_time?.slice(0, 2) ?? "0");
   const baseZ =
     Math.ceil(1 * hour) +
     index +
     ((event?.start_time?.slice(3, 4) ?? "0") == "0" ? 0 : 1);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div
       key={event?.id}
       ref={ref}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       className={cn(
         `w-full transaction-all duration-300 relative h-full cursor-pointer  group rounded-lg flex flex-col flex-grow hover:shadow-md transition-shadow duration-200  `,
         // max-w-[350px]
       )}
       style={{
-        zIndex: hovered ? 50 : baseZ,
+        zIndex: isExpanded ? 50 : baseZ,
         borderTop: "2px #fff solid",
         borderBottom: "2px #fff solid",
         borderLeft: "1px #fff solid",
         borderRight: "1px #fff solid",
       }}
     >
-      <AppDialog
-        trigger={
-          <Button
-            variant="destructive"
-            size="icon"
-            className={cn(
-              "absolute z-[100]  right-0  top-[-8px] h-6 w-6 p-0 shadow-md hover:bg-destructive/90 transition-all duration-200",
-              "opacity-0 group-hover:opacity-100",
-            )}
-          >
-            <Trash2 size={14} className="text-destructive-foreground" />
-          </Button>
-        }
-        title="Захиалгыг устгах уу?"
-        description="Энэ үйлдлийг хийсний дараа захиалга бүрмөсөн устах бөгөөд буцаах боломжгүй гэдгийг анхаарна уу!"
-        onConfirm={() => {
-          // handlers.handleDeleteEvent(event?.id);
-          onDelete(event?.id!);
-          showToast("deleted", "Захиалга устгагдлаа!");
-        }}
-      />
       <div
         className={cn(
-          "absolute   right-0 top-[100%] min-w-[250px] left-0   px-3 py-4 shadow-md  transition-all duration-200 bg-white",
-          hovered ? "block" : "hidden",
+          "absolute left-0 right-0 top-[calc(100%+8px)] min-w-[250px] rounded-2xl border border-slate-200 bg-white px-3 py-4 shadow-md transition-all duration-200",
+          "max-sm:min-w-0 max-sm:max-h-[75vh] max-sm:overflow-y-auto max-sm:shadow-2xl",
+          isExpanded ? "block" : "hidden",
         )}
-        // style={{
-        //   maxWidth: maw,
-        // }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="flex w-full "
-          // style={{ maxWidth: maw }}
-        >
-          <div className="font-semibold w-full text-xs truncate">
+        <div className="mb-3 border-b border-slate-100 pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-xs font-semibold text-slate-500">
+              Захиалгын дэлгэрэнгүй
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 shrink-0 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(false);
+              }}
+              aria-label="Дэлгэрэнгүй хаах"
+            >
+              <X size={16} />
+            </Button>
+          </div>
+          <div className="mt-3 flex w-full gap-2 sm:w-auto sm:flex-row">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 flex-1 justify-center px-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(false);
+                handleEditEvent({
+                  ...event,
+                });
+              }}
+            >
+              <Pencil size={14} />
+              Засах
+            </Button>
+            <AppDialog
+              trigger={
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-8 flex-1 justify-center px-3"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Trash2 size={14} />
+                  Устгах
+                </Button>
+              }
+              title="Захиалгыг устгах уу?"
+              description="Энэ үйлдлийг хийсний дараа захиалга бүрмөсөн устах бөгөөд буцаах боломжгүй гэдгийг анхаарна уу!"
+              onConfirm={() => {
+                onDelete(event?.id!);
+                showToast("deleted", "Захиалга устгагдлаа!");
+              }}
+            />
+          </div>
+        </div>
+        <div className="w-full">
+          <div className="font-semibold w-full text-xs">
             <div className="w-full">
-              <div className="flex justify-between ">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <p>Хэрэглэгчийн нэр:</p>{" "}
                   <p className="font-bold">
                     {event?.customer?.nickname ?? "-"}{" "}
                   </p>
                 </div>
-                {event?.order_status &&
-                  OrderStatusValues[event?.order_status as OrderStatus]}
+                <div>
+                  {event?.order_status &&
+                    OrderStatusValues[event?.order_status as OrderStatus]}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <p>Хэрэглэгчийн дугаар:</p>{" "}
@@ -216,7 +265,7 @@ export default function EventStyled({
           </div>
         </div>
 
-        <div className="font-semibold text-xs truncate my-1 w-full">
+        <div className="font-semibold text-xs my-1 w-full">
           {event?.details?.map((e, i) => {
             return (
               <div key={i} className=" my-1">
@@ -257,7 +306,7 @@ export default function EventStyled({
           </div>
         )}
         {event.created_by && (
-          <div className="flex items-center justify-left gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-left sm:gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <LUser className="w-4 h-4 text-rose-500" />
               <span>Үүсгэсэн</span>
@@ -307,27 +356,11 @@ export default function EventStyled({
       <div
         onClick={(e: React.MouseEvent<HTMLDivElement>) => {
           e.stopPropagation();
-          console.log(event)
-          handleEditEvent({
-            ...event,
-            // id: event?.id,
-            // branch_id: event.branch_id,
-            // customer_id: event.customer_id,
-            // user_id: event.user_id,
-            // description: event.description,
-            // order_status: event.order_status,
-            // total_amount: event.total_amount ?? 0,
-            // order_date: event.order_date,
-            // start_time: event.start_time,
-            // end_time: event.end_time,
-            // details: event.details,
-            // paid_amount: event.paid_amount,
-            // pre_amount: event.pre_amount,
-            // duration: event.duration,
-            // is_pre_amount_paid: event.is_pre_amount_paid,
-          });
+          setIsExpanded((prev) => !prev);
         }}
         className="h-full"
+        role="button"
+        aria-expanded={isExpanded}
       >
         {[...new Set(event.details?.map((d) => d.user_id))].length > 1 ? (
           <div
@@ -374,7 +407,8 @@ export default function EventStyled({
         ) : (
           <div
             className={cn(
-              "w-full p-2 text-white rounded-lg  h-full",
+              "w-full p-2 text-white rounded-lg h-full",
+              isExpanded && "ring-2 ring-white/70 ring-offset-1 ring-offset-slate-200",
               event?.minmized ? "flex-grow overflow-hidden" : "min-h-fit",
             )}
             style={{
@@ -386,6 +420,7 @@ export default function EventStyled({
               color={getBackgroundColor(color)}
               event={event}
               level={level}
+              expanded={isExpanded}
             />
           </div>
         )}
@@ -400,6 +435,7 @@ const EventItem = ({
   color,
   parallel = false,
   disableView,
+  expanded = false,
 }: {
   event: EventStyledProps;
   level: any;
@@ -410,6 +446,7 @@ const EventItem = ({
     status?: boolean;
   };
   parallel?: boolean;
+  expanded?: boolean;
 }) => {
   const { name, lvl, status } = disableView ?? {};
   return (
@@ -428,9 +465,20 @@ const EventItem = ({
             ) : (
               <div></div>
             )}
-            {!status &&
-              event?.order_status &&
-              OrderStatusValues[event?.order_status as OrderStatus]}
+            <div className="ml-2 flex items-center gap-2">
+              {!status &&
+                event?.order_status &&
+                OrderStatusValues[event?.order_status as OrderStatus]}
+              {!parallel && (
+                <div className="flex items-center opacity-80">
+                  {expanded ? (
+                    <ChevronUp size={14} />
+                  ) : (
+                    <ChevronDown size={14} />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
