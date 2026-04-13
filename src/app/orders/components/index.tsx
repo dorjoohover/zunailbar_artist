@@ -16,7 +16,7 @@ import { fetcher } from "@/hooks/fetcher";
 import SchedulerViewFilteration from "@/components/schedule/_components/view/schedular-view-filteration";
 import { SchedulerProvider } from "@/providers/schedular-provider";
 import DynamicHeader from "@/components/dynamicHeader";
-import { mnDate, toTimeString } from "@/lib/functions";
+import { coerceDate, mnDate, toTimeString } from "@/lib/functions";
 import { showToast } from "@/shared/components/showToast";
 import { OrderStatus } from "@/lib/enum";
 import { getColumns } from "./columns";
@@ -131,10 +131,11 @@ export const OrderPage = ({
     refresh();
     return res.success;
   };
-  const dateFormat = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
+  const dateFormat = (d: Date | string | number) => {
+    const value = coerceDate(d);
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   };
   const refresh = async (pg: PG = DEFAULT_PG) => {

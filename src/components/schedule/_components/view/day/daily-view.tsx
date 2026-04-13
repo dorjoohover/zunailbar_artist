@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CustomModal from "@/components/ui/custom-modal";
 import {
+  coerceDate,
   mnDate,
   mnDateFormat,
   mnDateFormatTitle,
@@ -207,8 +208,8 @@ export default function DailyView({
   stopDayEventSummary?: boolean;
   classNames?: { prev?: string; next?: string; addEvent?: string };
 }) {
-  const nextDate = filter?.date?.to ?? new Date();
-  const currentDate = filter?.date?.from ?? new Date();
+  const nextDate = coerceDate(filter?.date?.to ?? new Date());
+  const currentDate = coerceDate(filter?.date?.from ?? new Date());
   const [direction, setDirection] = useState<number>(0);
   const { setOpen } = useModal();
   const { handlers } = useScheduler();

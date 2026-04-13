@@ -6,6 +6,7 @@ import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
+import { coerceDate } from "@/lib/functions";
 import {
   Popover,
   PopoverContent,
@@ -31,10 +32,21 @@ export function DatePicker({
   onChange,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const normalizedValue = React.useMemo(() => {
+    if (mode === "range") {
+      const range = value as DateRange | undefined;
+      return {
+        from: range?.from ? coerceDate(range.from) : undefined,
+        to: range?.to ? coerceDate(range.to) : undefined,
+      } as DateRange;
+    }
+
+    return value ? coerceDate(value as Date | string | number) : undefined;
+  }, [mode, value]);
 
   const getDisplayText = () => {
     if (mode === "range") {
-      const range = value as DateRange | undefined;
+      const range = normalizedValue as DateRange | undefined;
 
       if (range?.from && range?.to) {
         return `${format(range.from, "yyyy/MM/dd")} - ${format(
@@ -50,8 +62,8 @@ export function DatePicker({
       return pl;
     }
 
-    if (mode === "single" && value instanceof Date) {
-      return format(value, "yyyy/MM/dd");
+    if (mode === "single" && normalizedValue instanceof Date) {
+      return format(normalizedValue, "yyyy/MM/dd");
     }
 
     return pl;
@@ -75,9 +87,11 @@ export function DatePicker({
         <PopoverContent className="w-auto overflow-hidden p-0" align="start">
           <Calendar
             mode={mode}
-            selected={value as any}
+            selected={normalizedValue as any}
             defaultMonth={
-              mode === "range" ? (value as DateRange)?.from : (value as Date)
+              mode === "range"
+                ? (normalizedValue as DateRange)?.from
+                : (normalizedValue as Date)
             }
             captionLayout="dropdown"
             required={mode === "range"}

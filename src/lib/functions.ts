@@ -8,7 +8,22 @@ export const formatDate = (value: string, limit = 10) => {
   if (!value || value == "") return "";
   return parseInt(value) < limit ? `0${value}` : `${value}`;
 };
-export const parseDate = (date = new Date(), isHour = true) => {
+export const coerceDate = (
+  value: Date | string | number | null | undefined = new Date(),
+) => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? new Date() : value;
+  }
+
+  const parsed = new Date(value ?? new Date());
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
+export const parseDate = (
+  value: Date | string | number = new Date(),
+  isHour = true,
+) => {
+  const date = coerceDate(value);
   const year = date.getFullYear();
   let month = (date.getMonth() + 1).toString();
   let day = date.getDate().toString();
@@ -79,8 +94,9 @@ export const mnDateStr = (now = new Date()): string => {
   return ubDate;
 };
 export const mnDate = (now = new Date()): Date => {
+  const source = coerceDate(now);
   const ubOffset = 8 * 60;
-  const utc = now?.getTime() + now.getTimezoneOffset() * 60000;
+  const utc = source.getTime() + source.getTimezoneOffset() * 60000;
   const ubTime = utc + ubOffset * 60 * 1000;
   return new Date(ubTime);
 };
@@ -96,10 +112,12 @@ export function stripTime(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export function mnDateFormatDay(d: Date) {
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const year = d.getFullYear();
+export function mnDateFormatDay(d: Date | string | number) {
+  const value = coerceDate(d);
+  
+  const month = value.getMonth() + 1;
+  const day = value.getDate();
+  const year = value.getFullYear();
   return `${month} сарын ${day}, ${year}`;
 }
 export function mnDateFormatTitle(d: Date | string | number = new Date()) {
@@ -193,8 +211,11 @@ export const checkEmpty = (value?: string) => {
   return value && value != "" && value != null ? value : "-";
 };
 const pad = (n: number) => String(n).padStart(2, "0");
-export const dateOnly = (d: Date) => {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+export const dateOnly = (d: Date | string | number) => {
+  const value = coerceDate(d);
+  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(
+    value.getDate(),
+  )}`;
 };
 
 export const changeValue = (

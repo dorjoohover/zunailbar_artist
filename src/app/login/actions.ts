@@ -8,5 +8,5 @@ export async function saveCookie(token: string, branch: string, merchant: string
   cookieStore.set('token', token);
   cookieStore.set('branch_id', branch);
   cookieStore.set('merchant_id', merchant);
-  redirect('/');
+  redirect('/orders');
 }

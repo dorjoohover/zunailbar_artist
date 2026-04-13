@@ -6,7 +6,7 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   const merchant_id = req.cookies.get("merchant_id")?.value;
   if (pathname === "/login" && merchant_id && token) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return NextResponse.redirect(new URL("/orders", req.url));
   }
   if (
     pathname === "/login" ||
