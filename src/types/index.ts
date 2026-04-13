@@ -148,6 +148,12 @@ export const eventSchema = z.object({
       z.nativeEnum(PaymentMethod).nullable(),
     )
     .optional() as unknown as number,
+  pre_method: z
+    .preprocess(
+      (val) => (typeof val === "string" ? parseInt(val, 10) : val),
+      z.nativeEnum(PaymentMethod).nullable(),
+    )
+    .optional() as unknown as number,
   total_amount: zNumOpt({
     label: "Нийт үнэ",
     value: 0,
@@ -163,6 +169,25 @@ export const eventSchema = z.object({
   }),
   parallel: z.boolean().nullable().optional(),
   edit: z.string().nullable().optional(),
+}).superRefine((data, ctx) => {
+  const preAmount = Number(data.pre_amount ?? 0);
+  const paidAmount = Number(data.paid_amount ?? 0);
+
+  if (preAmount > 0 && !data.pre_method) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["pre_method"],
+      message: "Урьдчилгааны төлбөрийн хэлбэр сонгоно уу",
+    });
+  }
+
+  if (paidAmount > 0 && !data.method) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["method"],
+      message: "Үлдэгдэл төлбөрийн хэлбэр сонгоно уу",
+    });
+  }
 });
 
 export type EventFormData = z.infer<typeof eventSchema>;

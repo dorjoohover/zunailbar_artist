@@ -30,6 +30,8 @@ export interface IOrder {
   created_at?: Date;
   paid_at?: Date;
   transaction_type?: string;
+  pre_method?: PaymentMethod;
+  method?: PaymentMethod;
 }
 export interface Order {
   id: string;
@@ -55,6 +57,7 @@ export interface Order {
   paid_at?: Date;
   transaction_type?: string;
   method?: PaymentMethod;
+  pre_method?: PaymentMethod;
 }
 
 export interface IOrderDetail {
@@ -62,10 +65,13 @@ export interface IOrderDetail {
   order_id?: string;
   service_id: string;
   description?: string;
+  price?: number;
   max_price?: number;
   min_price?: number;
   service_name?: string;
   user_id?: string;
+  nickname?: string;
+  order_date?: string;
   start_time?: string;
   end_time?: string;
   duration?: number;
@@ -86,7 +92,7 @@ export interface UserDateTime extends UserService {
 export interface OrderLog {
   id: string;
   changed_by: string;
-  changed_at: Date;
+  changed_at: Date | string;
   order_id: string;
   old_status: STATUS;
   new_status: STATUS;

@@ -73,6 +73,15 @@ export const OrderPage = ({
   ) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
   };
+  const rerunCurrentDateRange = () => {
+    const from = mnDate(filter?.date?.from ?? new Date());
+    const to = mnDate(filter?.date?.to ?? filter?.date?.from ?? new Date());
+
+    changeFilter("date", {
+      from,
+      to,
+    } as DateRange);
+  };
   const isFirstRender = useRef(true);
   const getAristSchedules = async () => {
     const date = mnDate(filter?.date?.from);
@@ -264,8 +273,8 @@ export const OrderPage = ({
           : `${from} - ${to} хоорондын ${processed} захиалга бодогдлоо`
         : "Бодох захиалга олдсонгүй",
     );
-    await refresh({});
     setAction(ACTION.DEFAULT);
+    rerunCurrentDateRange();
   };
   const columns = getColumns(edit, deleteOrders);
   useEffect(() => {

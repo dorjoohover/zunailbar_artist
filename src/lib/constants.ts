@@ -193,6 +193,9 @@ export const ScheduleStatusValue = {
 export interface ListType<T> {
   count: number;
   items: T[];
+  to?: string;
+  from?: string;
+  summary?: any;
 }
 export interface ScheduleDayData {
   times: string[];
@@ -237,6 +240,9 @@ export const DEFAULT_PG: Required<PG> = {
 export const ListDefault = {
   count: 0,
   items: [],
+  from: "",
+  to: "",
+  summary: undefined,
 };
 
 // export const PG = (dto: PgDto = {}): Required<PgDto> => ({
@@ -328,7 +334,10 @@ export const getUserLevelValue = {
 };
 
 export const getTransactionTypeValue = {
+  QPAY: "Qpay",
   P2P: "Дансаар",
+  BANK: "Дансаар",
+  CASH: "Бэлнээр",
   CARD: "Карт",
 };
 

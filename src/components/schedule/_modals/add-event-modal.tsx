@@ -60,6 +60,8 @@ const defaultValues = {
   total_amount: 0,
   pre_amount: 0,
   paid_amount: 0,
+  method: undefined,
+  pre_method: undefined,
 };
 type ListFieldProps<T> = {
   api: keyof typeof API;
@@ -313,6 +315,12 @@ export default function AddEventModal({
       total_amount: formData.total_amount as number | undefined,
       paid_amount: +(formData.paid_amount ?? 0),
       pre_amount: +(formData.pre_amount ?? 0),
+      method: formData.method
+        ? +formData.method.toString().slice(0, 2)
+        : undefined,
+      pre_method: formData.pre_method
+        ? +formData.pre_method.toString().slice(0, 2)
+        : undefined,
       edit: formData.edit ?? undefined,
       parallel: formData.parallel,
     } as IOrder;
@@ -729,8 +737,8 @@ export default function AddEventModal({
             </FormItems>
             <FormItems
               control={form.control}
-              name="method"
-              label="Төлбөрийн хэлбэр"
+              name="pre_method"
+              label="Урьдчилгааны хэлбэр"
             >
               {(field) => {
                 field.value = field.value
@@ -740,6 +748,34 @@ export default function AddEventModal({
                   <ComboBox
                     props={{ ...field }}
                     items={[
+                      PaymentMethod.P2P,
+                      PaymentMethod.BANK,
+                      PaymentMethod.CARD,
+                      PaymentMethod.CASH,
+                    ].map((item) => {
+                      return {
+                        value: item.toString(),
+                        label: getMethodValue[item],
+                      };
+                    })}
+                  />
+                );
+              }}
+            </FormItems>
+            <FormItems
+              control={form.control}
+              name="method"
+              label="Үлдэгдэл төлбөрийн хэлбэр"
+            >
+              {(field) => {
+                field.value = field.value
+                  ? +field.value?.toString().slice(0, 2)
+                  : field.value;
+                return (
+                  <ComboBox
+                    props={{ ...field }}
+                    items={[
+                      PaymentMethod.P2P,
                       PaymentMethod.BANK,
                       PaymentMethod.CARD,
                       PaymentMethod.CASH,
