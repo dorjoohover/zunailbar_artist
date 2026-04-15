@@ -291,7 +291,7 @@ export const getMethodValue = {
   [PaymentMethod.BANK]: "Bank",
   [PaymentMethod.CARD]: "Card",
   [PaymentMethod.CASH]: "Cash",
-  [PaymentMethod.P2P]: "Qpay",
+  [PaymentMethod.QPAY]: "Qpay",
 };
 
 export const getValuesStatus = {
@@ -335,7 +335,6 @@ export const getUserLevelValue = {
 
 export const getTransactionTypeValue = {
   QPAY: "Qpay",
-  P2P: "Дансаар",
   BANK: "Дансаар",
   CASH: "Бэлнээр",
   CARD: "Карт",

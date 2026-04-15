@@ -119,14 +119,14 @@ export const OrderPage = ({
   useEffect(() => {
     const interval = setInterval(
       () => {
-        setFilter({})
+        setFilter({});
         getAristSchedules();
       },
       5 * 60 * 1000,
     );
 
     return () => clearInterval(interval);
-  }, [filter?.date, filter?.artist, filter?.branch, filter?.status, filter?.list]);
+  }, []);
   const deleteOrder = async (id: string) => {
     const res = await deleteOne(Api.order, id);
     refresh();
@@ -264,7 +264,7 @@ export const OrderPage = ({
 
     setAction(ACTION.RUNNING);
     const res = await create(Api.order, { from, to } as any, "confirm");
-    const processed = Number((res?.data as any)?.count ?? 0);
+    const processed = Number((res?.data as any)?.payload?.count ?? 0);
     const success = processed > 0;
 
     showToast(
@@ -305,7 +305,7 @@ export const OrderPage = ({
                 customer: customers,
                 service: services,
                 user: users,
-                artists: artists
+                artists: artists,
               }}
               filter={filter}
               setFilter={changeFilter}

@@ -748,7 +748,7 @@ export default function AddEventModal({
                   <ComboBox
                     props={{ ...field }}
                     items={[
-                      PaymentMethod.P2P,
+                      PaymentMethod.QPAY,
                       PaymentMethod.BANK,
                       PaymentMethod.CARD,
                       PaymentMethod.CASH,
@@ -775,7 +775,7 @@ export default function AddEventModal({
                   <ComboBox
                     props={{ ...field }}
                     items={[
-                      PaymentMethod.P2P,
+                      PaymentMethod.QPAY,
                       PaymentMethod.BANK,
                       PaymentMethod.CARD,
                       PaymentMethod.CASH,

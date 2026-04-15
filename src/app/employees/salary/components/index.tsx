@@ -54,10 +54,6 @@ const formSchema = z.object({
     (val) => (typeof val === "string" ? parseFloat(val) : val),
     z.number(),
   ) as unknown as number,
-  date: z.preprocess(
-    (val) => (typeof val === "string" ? new Date(val) : val),
-    z.date(),
-  ) as unknown as Date,
   status: z
     .preprocess(
       (val) => (typeof val === "string" ? parseInt(val, 10) : val),
@@ -68,7 +64,6 @@ const formSchema = z.object({
 });
 const defaultValues: UserSalaryType = {
   user_id: "",
-  date: new Date(),
   duration: 5,
   percent: 30,
   status: STATUS.Active,
@@ -129,7 +124,6 @@ export const EmployeeUserSalaryPage = ({
     form.reset({
       edit: e.id,
       user_id: e.user_id,
-      date: e.date,
       duration: e.duration,
       percent: e.percent,
       status: e.status,
