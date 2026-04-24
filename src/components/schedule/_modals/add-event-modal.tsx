@@ -12,8 +12,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EventFormData, eventSchema } from "@/types/index";
 import { useScheduler } from "@/providers/schedular-provider";
-import { Branch, IOrder, Service, User } from "@/models";
-import { INPUT_TYPE, OrderStatus, PaymentMethod, ROLE } from "@/lib/enum";
+import { Branch, IOrder, Service, User, Voucher } from "@/models";
+import { INPUT_TYPE, OrderStatus, PaymentMethod, ROLE, VOUCHER } from "@/lib/enum";
 import { FormItems } from "@/shared/components/form.field";
 import { ComboBox } from "@/shared/components/combobox";
 import {
@@ -31,6 +31,7 @@ import {
   firstLetterUpper,
   mnDateFormat,
   mobileFormatter,
+  money,
   toTimeString,
   toYMD,
   usernameFormatter,
@@ -38,7 +39,7 @@ import {
 import { TextField } from "@/shared/components/text.field";
 import { showToast } from "@/shared/components/showToast";
 import { API, Api } from "@/utils/api";
-import { create, find, findOne, search } from "@/app/(api)";
+import { create, find, findOne, findRaw, search } from "@/app/(api)";
 import { Textarea } from "@/components/ui/textarea";
 import { FormItem, FormLabel } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -62,6 +63,10 @@ const defaultValues = {
   paid_amount: 0,
   method: undefined,
   pre_method: undefined,
+  voucher_id: null,
+  voucher_name: undefined,
+  voucher_value: 0,
+  discount_type: undefined,
 };
 type ListFieldProps<T> = {
   api: keyof typeof API;
@@ -84,12 +89,75 @@ const calculateDuration = (details: any[], parallel?: boolean | null) => {
 const sumPrices = (details: any[]) =>
   details.reduce((sum, d) => sum + Number(d.price || 0), 0);
 
+const calculateVoucherDiscount = (
+  subtotal: number,
+  voucher?: Pick<Voucher, "type" | "value"> | null,
+) => {
+  if (!voucher) return 0;
+
+  const total = Number(subtotal ?? 0);
+  const value = Number(voucher.value ?? 0);
+
+  if (total <= 0 || value <= 0) return 0;
+
+  if (Number(voucher.type) === VOUCHER.Percent) {
+    return Math.min(total, Math.round((total * value) / 100));
+  }
+
+  return Math.min(total, value);
+};
+
+const resolveEditBasePrices = ({
+  details,
+  services,
+  orderDiscount,
+}: {
+  details: any[];
+  services: Service[];
+  orderDiscount?: number | null;
+}) => {
+  const totalDiscount = Math.max(0, Number(orderDiscount ?? 0));
+  const discountedTotal = details.reduce(
+    (sum, detail) => sum + Number(detail?.price ?? 0),
+    0,
+  );
+  let distributed = 0;
+
+  return details.map((detail, index) => {
+    const explicitBase = Number(detail?.original_price ?? 0);
+    if (explicitBase > 0) {
+      return explicitBase;
+    }
+
+    const service = services.find((item) => item.id === detail?.service_id);
+    const finalPrice = Number(detail?.price ?? 0);
+    const fallback = Number(
+      detail?.min_price ?? service?.min_price ?? finalPrice ?? 0,
+    );
+
+    if (totalDiscount <= 0 || discountedTotal <= 0 || finalPrice <= 0) {
+      return fallback;
+    }
+
+    const share =
+      index === details.length - 1
+        ? totalDiscount - distributed
+        : Math.round((finalPrice / discountedTotal) * totalDiscount);
+
+    distributed += share;
+    return Math.max(fallback, finalPrice + share);
+  });
+};
+
 type DetailType = {
   service_id: string;
   service_name: string;
   duration: unknown;
   description?: string | null | undefined;
   price?: number | null | undefined;
+  min_price?: number | null | undefined;
+  max_price?: number | null | undefined;
+  original_price?: number | null | undefined;
   user_id?: string | null | undefined;
 };
 export default function AddEventModal({
@@ -200,8 +268,15 @@ export default function AddEventModal({
       result = result.filter((a) => serviceArtistIds.has(a.id));
     }
 
-    // 🟢 Сонгосон цагт боломжтой artist
-    if (order_date && start_time && slots?.[order_date]) {
+    // Queue үед дараагийн үйлчилгээнүүд өөр өөр эхлэх цагтай тул нэг start_time-аар
+    // бүх artist-ийг шүүхгүй.
+    const shouldFilterByStartSlot = parallel === true || details.length <= 1;
+    if (
+      shouldFilterByStartSlot &&
+      order_date &&
+      start_time &&
+      slots?.[order_date]
+    ) {
       const availableArtistIds = new Set(
         slots[order_date]
           .filter((s) => s.start_time.toString() === start_time)
@@ -218,6 +293,7 @@ export default function AddEventModal({
       branch_id: branchId,
       services: details?.map((s) => s.service_id),
       parallel: parallel,
+      multi_artist_queue: parallel ? undefined : true,
     };
     const res = await find<Slot>(Api.order, body, "slots");
     const data: Record<string, Slot[]> = (res.data as unknown as Slot[]).reduce(
@@ -265,6 +341,8 @@ export default function AddEventModal({
     null,
   );
   const [isCustomerCountLoading, setIsCustomerCountLoading] = useState(false);
+  const [availableVouchers, setAvailableVouchers] = useState<Voucher[]>([]);
+  const [voucherLoading, setVoucherLoading] = useState(false);
   const [orderDuration, setDuration] = useState(undefined);
   const [userService, setUserService] = useState<OrderSlot>({});
   const [slots, setSlots] = useState<Record<string, Slot[]>>({});
@@ -274,6 +352,7 @@ export default function AddEventModal({
   });
 
   const isEdit = Boolean(values?.id);
+  const isSalaryClosed = Boolean(values?.id && values?.salary_date);
   const hasId = values?.id !== undefined;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -315,6 +394,10 @@ export default function AddEventModal({
       total_amount: formData.total_amount as number | undefined,
       paid_amount: +(formData.paid_amount ?? 0),
       pre_amount: +(formData.pre_amount ?? 0),
+      voucher_id: formData.voucher_id ?? null,
+      voucher_name: formData.voucher_name ?? undefined,
+      voucher_value: Number(formData.voucher_value ?? 0) || undefined,
+      discount_type: formData.discount_type ?? undefined,
       method: formData.method
         ? +formData.method.toString().slice(0, 2)
         : undefined,
@@ -367,6 +450,13 @@ export default function AddEventModal({
 
     form.setValue("details", updated);
   };
+  const clearDetailArtists = () => {
+    const current = form.getValues("details") || [];
+    form.setValue(
+      "details",
+      current.map((item) => ({ ...item, user_id: undefined })),
+    );
+  };
   const {
     branch_id: branchId,
     customer_id: customerId,
@@ -378,14 +468,24 @@ export default function AddEventModal({
     order_date,
     start_time,
     duration,
+    voucher_id,
   } = useWatch<EventFormData>({ control: form.control });
   const isDurationInitialized = useRef(false);
 
   useEffect(() => {
     if (!values || !values?.id || !services.items.length) return;
 
-    const mappedDetails = values?.details?.map((v: any) => {
+    const basePrices = resolveEditBasePrices({
+      details: values?.details ?? [],
+      services: services.items,
+      orderDiscount: values?.discount,
+    });
+
+    const mappedDetails = values?.details?.map((v: any, index: number) => {
       const service = services.items.find((s) => s.id === v.service_id);
+      const basePrice =
+        basePrices[index] ??
+        Number(v?.original_price ?? service?.min_price ?? v?.price ?? 0);
       return {
         id: v.id,
         service_id: service?.id ?? "",
@@ -393,7 +493,10 @@ export default function AddEventModal({
         duration: Number(v?.duration ?? service?.duration ?? 0),
         category_id: service?.category_id ?? "",
         description: v.description ?? "",
-        price: v.price ?? 0,
+        price: basePrice,
+        min_price: Number(v?.min_price ?? service?.min_price ?? basePrice ?? 0),
+        max_price: Number(v?.max_price ?? service?.max_price ?? basePrice ?? 0),
+        original_price: basePrice,
         user_id: v.user?.id ?? v.user_id ?? "",
       };
     });
@@ -448,6 +551,69 @@ export default function AddEventModal({
       cancelled = true;
     };
   }, [customerId]);
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadVouchers = async () => {
+      if (!customerId) {
+        setAvailableVouchers([]);
+        setVoucherLoading(false);
+        form.setValue("voucher_id", null, { shouldDirty: true });
+        form.setValue("voucher_name", undefined);
+        form.setValue("voucher_value", 0);
+        form.setValue("discount_type", undefined);
+        return;
+      }
+
+      setVoucherLoading(true);
+
+      try {
+        const res = await findRaw<Voucher[]>(
+          Api.voucher,
+          {
+            order_id: values?.id,
+          },
+          `available/${customerId}`,
+        );
+
+        if (cancelled) return;
+
+        setAvailableVouchers(Array.isArray(res.data) ? res.data : []);
+      } catch (_error) {
+        if (!cancelled) {
+          setAvailableVouchers([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setVoucherLoading(false);
+        }
+      }
+    };
+
+    loadVouchers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId, form, values?.id]);
+  useEffect(() => {
+    if (voucherLoading) return;
+
+    const selectedVoucher = availableVouchers.find((item) => item.id === voucher_id);
+    if (!selectedVoucher) {
+      if (voucher_id) {
+        form.setValue("voucher_id", null, { shouldDirty: true });
+      }
+      form.setValue("voucher_name", undefined);
+      form.setValue("voucher_value", 0);
+      form.setValue("discount_type", undefined);
+      return;
+    }
+
+    form.setValue("voucher_name", selectedVoucher.name ?? undefined);
+    form.setValue("voucher_value", Number(selectedVoucher.value ?? 0));
+    form.setValue("discount_type", selectedVoucher.type);
+  }, [availableVouchers, form, voucher_id, voucherLoading]);
   useEffect(() => {
     let cancelled = false;
 
@@ -531,26 +697,35 @@ export default function AddEventModal({
 
   useEffect(() => {
     const serviceTotal = sumPrices(details);
-    const total =
-      serviceTotal == 0
+    const selectedVoucher = availableVouchers.find((item) => item.id === voucher_id);
+    const voucherDiscount = calculateVoucherDiscount(serviceTotal, selectedVoucher);
+    const calculatedTotal =
+      serviceTotal === 0
         ? Number(pre_amount || 0) + Number(paid_amount || 0)
-        : serviceTotal;
-    const currentTotal = total_amount || 0;
+        : Math.max(serviceTotal - voucherDiscount, 0);
+    const normalizedPreAmount = Math.min(Number(pre_amount || 0), calculatedTotal);
+    const nextPaidAmount = Math.max(calculatedTotal - normalizedPreAmount, 0);
+    const currentTotal = Number(total_amount || 0);
 
-    // 🔥 Loop-оос хамгаална
-    if (currentTotal !== total) {
-      form.setValue("total_amount", total, {
+    if (currentTotal !== calculatedTotal) {
+      form.setValue("total_amount", calculatedTotal, {
         shouldDirty: true,
         shouldTouch: false,
       });
     }
-    if (total_amount != serviceTotal && serviceTotal != 0) {
-      form.setValue("paid_amount", serviceTotal - +pre_amount, {
+    if (Number(pre_amount || 0) !== normalizedPreAmount) {
+      form.setValue("pre_amount", normalizedPreAmount, {
         shouldDirty: true,
         shouldTouch: false,
       });
     }
-  }, [details, pre_amount]);
+    if (Number(paid_amount || 0) !== nextPaidAmount) {
+      form.setValue("paid_amount", nextPaidAmount, {
+        shouldDirty: true,
+        shouldTouch: false,
+      });
+    }
+  }, [availableVouchers, details, paid_amount, pre_amount, total_amount, voucher_id]);
   useEffect(() => {
     if (!start_time || !duration) return;
 
@@ -583,6 +758,12 @@ export default function AddEventModal({
               <span>{mobileFormatter(values.created_by.mobile)}</span>
             </div>
           </div>
+        </div>
+      )}
+      {isSalaryClosed && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Энэ захиалгыг admin хаасан тул артист талаас дүн, үйлчилгээ, артист,
+          төлбөрийн мэдээлэл өөрчлөх боломжгүй.
         </div>
       )}
       <FormProvider {...form}>
@@ -674,21 +855,128 @@ export default function AddEventModal({
           <FormItems control={form.control} name="order_status" label="Статус">
             {(field) => {
               return (
-                <ComboBox
-                  props={{ ...field }}
-                  items={getEnumValues(OrderStatus).map((item) => {
-                    return {
-                      value: item.toString(),
-                      label: OrderStatusValues[item],
-                    };
-                  })}
-                />
+                <div
+                  className={
+                    isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                  }
+                >
+                  <ComboBox
+                    props={{ ...field }}
+                    items={getEnumValues(OrderStatus).map((item) => {
+                      return {
+                        value: item.toString(),
+                        label: OrderStatusValues[item],
+                      };
+                    })}
+                  />
+                </div>
               );
             }}
           </FormItems>
         </div>
         <div className="border-t ">
           <p className="my-4">Төлбөр</p>
+          <div className="mb-4 rounded-xl border bg-slate-50 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold">Урамшуулал ашиглуулах</p>
+                <p className="text-sm text-muted-foreground">
+                  Хэрэглэгчийн идэвхтэй урамшууллууд энд харагдана.
+                </p>
+              </div>
+              {voucher_id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSalaryClosed}
+                  onClick={() => {
+                    form.setValue("voucher_id", null, { shouldDirty: true });
+                    form.setValue("voucher_name", undefined);
+                    form.setValue("voucher_value", 0);
+                    form.setValue("discount_type", undefined);
+                  }}
+                >
+                  Цэвэрлэх
+                </Button>
+              )}
+            </div>
+
+            {!customerId ? (
+              <p className="text-sm text-muted-foreground">
+                Урамшуулал харахын тулд эхлээд хэрэглэгчээ сонгоно уу.
+              </p>
+            ) : voucherLoading ? (
+              <p className="text-sm text-muted-foreground">
+                Урамшууллын мэдээлэл уншиж байна...
+              </p>
+            ) : availableVouchers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Энэ хэрэглэгчид ашиглах боломжтой урамшуулал алга байна.
+              </p>
+            ) : (
+              <div
+                className={`grid gap-2 md:grid-cols-2 ${
+                  isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                }`}
+              >
+                {availableVouchers.map((voucher) => {
+                  const selected = voucher.id === voucher_id;
+                  const subtotal = sumPrices(details);
+                  const discount = calculateVoucherDiscount(subtotal, voucher);
+                  const valueLabel =
+                    Number(voucher.type) === VOUCHER.Percent
+                      ? `${voucher.value ?? 0}%`
+                      : `${money(String(voucher.value ?? 0))}₮`;
+
+                  return (
+                    <button
+                      key={voucher.id}
+                      type="button"
+                      className={`rounded-xl border px-3 py-3 text-left transition-all ${
+                        selected
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "bg-white hover:border-primary/40"
+                      }`}
+                      onClick={() => {
+                        form.setValue("voucher_id", selected ? null : voucher.id, {
+                          shouldDirty: true,
+                        });
+                        form.setValue(
+                          "voucher_name",
+                          selected ? undefined : voucher.name ?? undefined,
+                        );
+                        form.setValue(
+                          "voucher_value",
+                          selected ? 0 : Number(voucher.value ?? 0),
+                        );
+                        form.setValue(
+                          "discount_type",
+                          selected ? undefined : voucher.type,
+                        );
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold">{voucher.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {valueLabel}
+                          </p>
+                        </div>
+                        {selected && (
+                          <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-white">
+                            Сонгосон
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Захиалгын дүнгээс {money(String(discount))}₮ хасагдана.
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <div className="double-col">
             <FormItems
               control={form.control}
@@ -714,7 +1002,7 @@ export default function AddEventModal({
                 return (
                   <TextField
                     type={INPUT_TYPE.MONEY}
-                    disabled={false}
+                    disabled={isSalaryClosed}
                     props={{ ...field }}
                   />
                 );
@@ -745,20 +1033,26 @@ export default function AddEventModal({
                   ? +field.value?.toString().slice(0, 2)
                   : field.value;
                 return (
-                  <ComboBox
-                    props={{ ...field }}
-                    items={[
-                      PaymentMethod.QPAY,
-                      PaymentMethod.BANK,
-                      PaymentMethod.CARD,
-                      PaymentMethod.CASH,
-                    ].map((item) => {
-                      return {
-                        value: item.toString(),
-                        label: getMethodValue[item],
-                      };
-                    })}
-                  />
+                  <div
+                    className={
+                      isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                    }
+                  >
+                    <ComboBox
+                      props={{ ...field }}
+                      items={[
+                        PaymentMethod.QPAY,
+                        PaymentMethod.BANK,
+                        PaymentMethod.CARD,
+                        PaymentMethod.CASH,
+                      ].map((item) => {
+                        return {
+                          value: item.toString(),
+                          label: getMethodValue[item],
+                        };
+                      })}
+                    />
+                  </div>
                 );
               }}
             </FormItems>
@@ -772,20 +1066,26 @@ export default function AddEventModal({
                   ? +field.value?.toString().slice(0, 2)
                   : field.value;
                 return (
-                  <ComboBox
-                    props={{ ...field }}
-                    items={[
-                      PaymentMethod.QPAY,
-                      PaymentMethod.BANK,
-                      PaymentMethod.CARD,
-                      PaymentMethod.CASH,
-                    ].map((item) => {
-                      return {
-                        value: item.toString(),
-                        label: getMethodValue[item],
-                      };
-                    })}
-                  />
+                  <div
+                    className={
+                      isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                    }
+                  >
+                    <ComboBox
+                      props={{ ...field }}
+                      items={[
+                        PaymentMethod.QPAY,
+                        PaymentMethod.BANK,
+                        PaymentMethod.CARD,
+                        PaymentMethod.CASH,
+                      ].map((item) => {
+                        return {
+                          value: item.toString(),
+                          label: getMethodValue[item],
+                        };
+                      })}
+                    />
+                  </div>
                 );
               }}
             </FormItems>
@@ -794,7 +1094,11 @@ export default function AddEventModal({
 
         <div className="border p-2 rounded-md">
           <p className="my-2 font-bold">Үйлчилгээ</p>
-          <div className="grid grid-cols-2 gap-1 max-h-[220px] overflow-auto">
+          <div
+            className={`grid grid-cols-2 gap-1 max-h-[220px] overflow-auto ${
+              isSalaryClosed ? "pointer-events-none opacity-60" : ""
+            }`}
+          >
             {loader[Api.service] ? (
               <div className="flex col-span-2 py-4 items-center justify-center">
                 <LoaderMini />
@@ -857,7 +1161,12 @@ export default function AddEventModal({
                             duration: service.duration,
                             category_id: service.category_id,
                             description: "",
-                            price: 0,
+                            price: Number(service.min_price ?? 0),
+                            min_price: Number(service.min_price ?? 0),
+                            max_price: Number(
+                              service.max_price ?? service.min_price ?? 0,
+                            ),
+                            original_price: Number(service.min_price ?? 0),
                             user_id: "",
                           });
                         }}
@@ -970,31 +1279,36 @@ export default function AddEventModal({
 
               {details.length == 2 &&
                 details?.[0].category_id != details?.[1].category_id && (
-                  <FormItems control={form.control} name="parallel" label="">
-                    {(field) => {
-                      return (
-                        <div className="col-span-1 flex gap-2 cursor-pointer items-center ">
-                          <Checkbox
-                            id="parallel"
-                            checked={field.value as boolean}
-                            onCheckedChange={(e) => {
-                              form.setValue("parallel", e as boolean);
-                              updateDetail(0, undefined, "user_id");
-                              updateDetail(1, undefined, "user_id");
-                            }}
-                            className="w-5 h-5"
-                            aria-label="Select row"
-                          />
-                          <label
-                            htmlFor="parallel"
-                            className="flex items-center gap-2 font-semibold text-lg"
-                          >
-                            Давхар эсэх
-                          </label>
-                        </div>
-                      );
-                    }}
-                  </FormItems>
+                  <div
+                    className={
+                      isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                    }
+                  >
+                    <FormItems control={form.control} name="parallel" label="">
+                      {(field) => {
+                        return (
+                          <div className="col-span-1 flex gap-2 cursor-pointer items-center ">
+                            <Checkbox
+                              id="parallel"
+                              checked={field.value as boolean}
+                              onCheckedChange={(e) => {
+                                form.setValue("parallel", e as boolean);
+                                clearDetailArtists();
+                              }}
+                              className="w-5 h-5"
+                              aria-label="Select row"
+                            />
+                            <label
+                              htmlFor="parallel"
+                              className="flex items-center gap-2 font-semibold text-lg"
+                            >
+                              Давхар эсэх
+                            </label>
+                          </div>
+                        );
+                      }}
+                    </FormItems>
+                  </div>
                 )}
             </div>
             <div>
@@ -1008,49 +1322,61 @@ export default function AddEventModal({
                         <div className="double-col">
                           <FormItem>
                             <FormLabel>Артист</FormLabel>
-                            <ComboBox
-                              className="max-w-xs"
-                              items={(isTimeSlotsEnabled
-                                ? getSuitableArtists(artists, detail.service_id)
-                                : artists
-                              ).map((b, i) => {
-                                const [mobile, nickname, branch] =
-                                  b?.value?.split("__") ?? ["", "", "", ""];
-                                return {
-                                  label: `${firstLetterUpper(
-                                    nickname,
-                                  )} ${mobileFormatter(mobile)}`,
-                                  value: b.id,
-                                };
-                              })}
-                              props={{
-                                onChange: (v: string) => {
-                                  if (parallel) {
-                                    if (details.find((d) => d.user_id == v)) {
-                                      toast.warning("Дахин сонгох боломжгүй ");
-                                      form.setValue("parallel", false);
+                            <div
+                              className={
+                                isSalaryClosed
+                                  ? "pointer-events-none opacity-60"
+                                  : ""
+                              }
+                            >
+                              <ComboBox
+                                className="max-w-xs"
+                                items={(isTimeSlotsEnabled
+                                  ? getSuitableArtists(
+                                      artists,
+                                      detail.service_id,
+                                    )
+                                  : artists
+                                ).map((b, i) => {
+                                  const [mobile, nickname, branch] =
+                                    b?.value?.split("__") ?? ["", "", "", ""];
+                                  return {
+                                    label: `${firstLetterUpper(
+                                      nickname,
+                                    )} ${mobileFormatter(mobile)}`,
+                                    value: b.id,
+                                  };
+                                })}
+                                props={{
+                                  onChange: (v: string) => {
+                                    if (
+                                      parallel &&
+                                      details.some(
+                                        (d, detailIndex) =>
+                                          detailIndex !== i && d.user_id == v,
+                                      )
+                                    ) {
+                                      toast.warning(
+                                        "Дахин сонгох боломжгүй ",
+                                      );
                                       return;
-                                    } else {
-                                      updateDetail(i, v, "user_id");
                                     }
-                                  } else {
-                                    updateDetail(0, v, "user_id");
-                                    if (details.length == 2)
-                                      updateDetail(1, v, "user_id");
-                                  }
-                                },
-                                name: "",
-                                onBlur: () => {},
-                                ref: () => {},
-                                value: detail?.user_id,
-                              }}
-                            />
+                                    updateDetail(i, v, "user_id");
+                                  },
+                                  name: "",
+                                  onBlur: () => {},
+                                  ref: () => {},
+                                  value: detail?.user_id,
+                                }}
+                              />
+                            </div>
                             {/* {message && <FormMessage />} */}
                           </FormItem>
                           <FormItem>
                             <FormLabel>Төлбөр</FormLabel>
                             <TextField
                               type={INPUT_TYPE.MONEY}
+                              disabled={isSalaryClosed}
                               props={{
                                 onChange: (v: string) => {
                                   const value = parseInt(v);

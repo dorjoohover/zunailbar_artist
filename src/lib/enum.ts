@@ -113,6 +113,17 @@ export enum DISCOUNT {
   Price = 20,
 }
 
+export enum VOUCHER {
+  Percent = 10,
+  Price = 20,
+}
+
+export enum VoucherStatus {
+  Available = 10,
+  Used = 20,
+  Cancelled = 30,
+}
+
 export enum CategoryType {
   DEFAULT = 10,
   COST = 20,

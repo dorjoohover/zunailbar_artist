@@ -2,6 +2,7 @@
 import { DataTable } from "@/components/data-table";
 import {
   ACTION,
+  EMPLOYEE_USER_LEVELS,
   DEFAULT_PG,
   EmployeeStatusValue,
   getUserLevelValue,
@@ -617,7 +618,7 @@ export const EmployeePage = ({
                         return (
                           <ComboBox
                             props={{ ...field }}
-                            items={[UserLevel.JUNIOR, UserLevel.SENIOR].map((item) => {
+                            items={EMPLOYEE_USER_LEVELS.map((item) => {
                               return {
                                 value: item.toString(),
                                 label: getUserLevelValue[item].name,

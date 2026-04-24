@@ -147,6 +147,64 @@ export const addMinutes = (time: string, minutes: number) => {
     .padStart(2, "0")}:00`;
 };
 
+type TimeRangeLike = {
+  start_time?: string | null;
+  end_time?: string | null;
+  details?: Array<{
+    start_time?: string | null;
+    end_time?: string | null;
+  }> | null;
+};
+
+const normalizeTimeValue = (value?: string | null) => {
+  if (!value) return undefined;
+  const match = `${value}`.match(/(\d{2}:\d{2})(?::\d{2})?/);
+  return match ? `${match[1]}:00` : undefined;
+};
+
+const timeToMinuteValue = (value?: string | null) => {
+  const normalized = normalizeTimeValue(value);
+  if (!normalized) return Number.NaN;
+  const [hours, minutes] = normalized.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+
+export const resolveOrderTimeRange = <T extends TimeRangeLike>(
+  value?: T | null,
+) => {
+  const detailRanges = (value?.details ?? [])
+    .map((detail) => ({
+      start_time: normalizeTimeValue(detail?.start_time),
+      end_time: normalizeTimeValue(detail?.end_time),
+    }))
+    .filter((detail) => detail.start_time && detail.end_time);
+
+  if (!detailRanges.length) {
+    return {
+      start_time: normalizeTimeValue(value?.start_time) ?? value?.start_time,
+      end_time: normalizeTimeValue(value?.end_time) ?? value?.end_time,
+    };
+  }
+
+  const start_time =
+    detailRanges
+      .slice()
+      .sort(
+        (a, b) => timeToMinuteValue(a.start_time) - timeToMinuteValue(b.start_time),
+      )[0]?.start_time ?? normalizeTimeValue(value?.start_time);
+  const end_time =
+    detailRanges
+      .slice()
+      .sort(
+        (a, b) => timeToMinuteValue(b.end_time) - timeToMinuteValue(a.end_time),
+      )[0]?.end_time ?? normalizeTimeValue(value?.end_time);
+
+  return {
+    start_time,
+    end_time,
+  };
+};
+
 export function add15Days(day: number) {
   const today = new Date();
   const month = today.getMonth();

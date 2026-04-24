@@ -27,6 +27,7 @@ export default async function Page() {
         users={user.data}
         customers={client.data}
         services={services.data}
+        showConfirmButton={false}
       />
       {/* </div> */}
     </section>

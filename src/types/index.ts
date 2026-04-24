@@ -1,5 +1,5 @@
 import { zNumOpt, zStrOpt, ZValidator } from "@/lib/constants";
-import { OrderStatus, PaymentMethod } from "@/lib/enum";
+import { OrderStatus, PaymentMethod, VOUCHER } from "@/lib/enum";
 import { IOrder, Order } from "@/models";
 import { Dispatch, SVGProps } from "react";
 import { z } from "zod";
@@ -100,6 +100,21 @@ const detail = z.object({
     value: 0,
     label: "Үнэ",
   }),
+  min_price: zNumOpt({
+    value: 0,
+    label: "Доод үнэ",
+    allowNullable: true,
+  }),
+  max_price: zNumOpt({
+    value: 0,
+    label: "Дээд үнэ",
+    allowNullable: true,
+  }),
+  original_price: zNumOpt({
+    value: 0,
+    label: "Үндсэн үнэ",
+    allowNullable: true,
+  }),
   user_id: zStrOpt({
     allowNullable: false,
     label: "Артист",
@@ -167,6 +182,19 @@ export const eventSchema = z.object({
     label: "Гүйцээж төлсөн төлбөр",
     allowNullable: true,
   }),
+  voucher_id: z.string().nullable().optional(),
+  voucher_name: z.string().nullable().optional(),
+  voucher_value: zNumOpt({
+    value: 0,
+    label: "Урамшууллын дүн",
+    allowNullable: true,
+  }),
+  discount_type: z
+    .preprocess(
+      (val) => (typeof val === "string" ? parseInt(val, 10) : val),
+      z.nativeEnum(VOUCHER).nullable(),
+    )
+    .optional() as unknown as number,
   parallel: z.boolean().nullable().optional(),
   edit: z.string().nullable().optional(),
 }).superRefine((data, ctx) => {

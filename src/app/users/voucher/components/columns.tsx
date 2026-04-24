@@ -1,117 +1,137 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { IProduct } from "@/models/product.model";
-import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { AppAlertDialog } from "@/components/AlertDialog";
-import { toast } from "sonner";
 import { money, parseDate } from "@/lib/functions";
-import { IProductTransaction } from "@/models";
-import { ProductTransactionStatus } from "@/lib/enum";
-import { IVoucher } from "@/models/";
+import {
+  getUserLevelValue,
+  getVoucherStatusValue,
+  getVoucherTypeValue,
+} from "@/lib/constants";
+import { IVoucher } from "@/models";
 import { TableActionButtons } from "@/components/tableActionButtons";
+import { UserLevel, VoucherStatus, VOUCHER } from "@/lib/enum";
 
-export function getColumns(onEdit: (product: IVoucher) => void, remove: (index: number) => Promise<boolean>): ColumnDef<IVoucher>[] {
+export function getColumns(
+  onEdit: (voucher: IVoucher) => void,
+  remove: (voucher: IVoucher) => Promise<boolean>,
+): ColumnDef<IVoucher>[] {
   return [
     {
-      id: "select",
-      header: ({ table }) => <span>№</span>,
-      cell: ({ row }) => <span className="">{row.index + 1}</span>,
-    },
-    {
-      accessorKey: "branch_name",
-      header: ({ column }) => (
-        <Button variant="table_header" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-bold">
-          Салбар <ArrowUpDown className="w-4 h-4 ml-2" />
-        </Button>
-      ),
+      id: "index",
+      header: () => <span>№</span>,
+      cell: ({ row }) => <span>{row.index + 1}</span>,
     },
     {
       accessorKey: "name",
-      header: ({ column }) => (
-        <Button variant="table_header" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-bold">
-          Нэр <ArrowUpDown className="w-4 h-4 ml-2" />
-        </Button>
+      header: () => <span>Урамшуулал</span>,
+      cell: ({ row }) => {
+        const voucher = row.original;
+        return (
+          <div className="space-y-1">
+            <p className="font-semibold">{voucher.name}</p>
+            {voucher.note && (
+              <p className="text-xs text-muted-foreground">{voucher.note}</p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "user_name",
+      header: () => <span>Хэрэглэгч</span>,
+      cell: ({ row }) => {
+        const voucher = row.original;
+        return (
+          <div className="space-y-1">
+            <p>{voucher.user_name ?? "-"}</p>
+            <p className="text-xs text-muted-foreground">
+              {voucher.mobile ?? "-"}
+            </p>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "type",
+      header: () => <span>Төрөл</span>,
+      cell: ({ row }) => (
+        <span>{getVoucherTypeValue[row.original.type as VOUCHER] ?? "-"}</span>
       ),
     },
+    {
+      accessorKey: "value",
+      header: () => <span>Дүн</span>,
+      cell: ({ row }) => {
+        const voucher = row.original;
+        if (voucher.type === VOUCHER.Percent) {
+          return <span>{voucher.value ?? 0}%</span>;
+        }
 
-    {
-      accessorKey: "duration",
-      header: ({ column }) => (
-        <Button variant="table_header" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-bold">
-          Хугацаа <ArrowUpDown className="w-4 h-4 ml-2" />
-        </Button>
-      ),
-      cell: ({ row }) => `${row.getValue("duration")}мин`,
+        return <span>{money(String(voucher.value ?? 0), "₮")}</span>;
+      },
     },
     {
-      accessorKey: "min_price",
-      header: ({ column }) => (
-        <Button variant="table_header" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-bold">
-          Үнэ <ArrowUpDown className="w-4 h-4 ml-2" />
-        </Button>
-      ),
-      cell: ({ row }) => money(row.getValue("min_price"), "₮"),
+      accessorKey: "level",
+      header: () => <span>Түвшин</span>,
+      cell: ({ row }) => {
+        const level = row.original.level;
+        if (level == null) return <span>-</span>;
+
+        return (
+          <span>{getUserLevelValue[level as UserLevel]?.name ?? "-"}</span>
+        );
+      },
     },
     {
-      accessorKey: "max_price",
-      header: ({ column }) => (
-        <Button variant="table_header" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-bold">
-          Дээд үнэ <ArrowUpDown className="w-4 h-4 ml-2" />
-        </Button>
-      ),
-      cell: ({ row }) => money(row.getValue("max_price"), "₮"),
+      accessorKey: "voucher_status",
+      header: () => <span>Төлөв</span>,
+      cell: ({ row }) => {
+        const voucherStatus =
+          getVoucherStatusValue[
+            row.original.voucher_status as VoucherStatus
+          ];
+        return (
+          <span className={voucherStatus?.color ?? ""}>
+            {voucherStatus?.name ?? "-"}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "used_order_id",
+      header: () => <span>Ашигласан захиалга</span>,
+      cell: ({ row }) => <span>{row.original.used_order_id ?? "-"}</span>,
+    },
+    {
+      accessorKey: "used_at",
+      header: () => <span>Ашигласан огноо</span>,
+      cell: ({ row }) =>
+        row.original.used_at ? (
+          <span>{parseDate(row.original.used_at, true)}</span>
+        ) : (
+          <span>-</span>
+        ),
     },
     {
       accessorKey: "created_at",
-      header: ({ column }) => (
-        <Button variant="table_header" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="font-bold">
-          Үүсгэсэн <ArrowUpDown className="w-4 h-4 ml-2" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const date = parseDate(new Date(row.getValue("created_at")), false);
-        return date;
-      },
-      sortingFn: (rowA, rowB, columnId) => {
-        const dateA = new Date(rowA.getValue(columnId)).getTime();
-        const dateB = new Date(rowB.getValue(columnId)).getTime();
-        return dateA - dateB;
-      },
+      header: () => <span>Үүсгэсэн</span>,
+      cell: ({ row }) =>
+        row.original.created_at ? (
+          <span>{parseDate(row.original.created_at, true)}</span>
+        ) : (
+          <span>-</span>
+        ),
     },
     {
       id: "actions",
       header: "Үйлдэл",
       cell: ({ row }) => (
-        // Bagasgasan
-        <TableActionButtons rowData={row.original} onEdit={(data) => onEdit(data)} onRemove={(data) => remove(row.index)}></TableActionButtons>
+        <TableActionButtons
+          rowData={row.original}
+          onEdit={onEdit}
+          onRemove={remove}
+          title="Урамшуулал устгах уу?"
+          description="Устгавал энэ урамшуулал дахин харагдахгүй болно."
+        />
       ),
     },
   ];
-}
-{
-  /* <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(row.original)}
-          >
-            <Pencil className="w-4 h-4" />
-          </Button>
-
-          <AppAlertDialog
-            title="Итгэлтэй байна уу?"
-            description="Бүр устгана шүү."
-            onConfirm={async () => {
-              const res = await remove(row.index);
-              console.log(res);
-              toast("Амжилттай устгалаа!" + res, {});
-            }}
-            trigger={
-              <Button variant="ghost" size="icon">
-                <Trash2 className="w-4 h-4 text-red-500" />
-              </Button>
-            }
-          />
-        </div> */
 }

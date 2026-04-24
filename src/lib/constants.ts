@@ -34,6 +34,8 @@ import {
   UserLevel,
   UserProductStatus,
   UserStatus,
+  VoucherStatus,
+  VOUCHER,
 } from "./enum";
 import z, { nullable } from "zod";
 import { showToast } from "@/shared/components/showToast";
@@ -294,6 +296,26 @@ export const getMethodValue = {
   [PaymentMethod.QPAY]: "Qpay",
 };
 
+export const getVoucherTypeValue = {
+  [VOUCHER.Percent]: "Хувиар",
+  [VOUCHER.Price]: "Дүнгээр",
+};
+
+export const getVoucherStatusValue = {
+  [VoucherStatus.Available]: {
+    name: "Идэвхтэй",
+    color: "green-badge badge",
+  },
+  [VoucherStatus.Used]: {
+    name: "Ашигласан",
+    color: "slate-badge badge",
+  },
+  [VoucherStatus.Cancelled]: {
+    name: "Цуцалсан",
+    color: "red-badge badge",
+  },
+};
+
 export const getValuesStatus = {
   [STATUS.Active]: { name: "Идэвхтэй", color: "green-badge badge" },
   [STATUS.Hidden]: { name: "Цуцлах", color: "red-badge badge" },
@@ -332,6 +354,17 @@ export const getUserLevelValue = {
     Icon: Crown,
   },
 };
+
+export const CUSTOMER_USER_LEVELS = [
+  UserLevel.BRONZE,
+  UserLevel.SILVER,
+  UserLevel.GOLD,
+] as const;
+
+export const EMPLOYEE_USER_LEVELS = [
+  UserLevel.JUNIOR,
+  UserLevel.SENIOR,
+] as const;
 
 export const getTransactionTypeValue = {
   QPAY: "Qpay",

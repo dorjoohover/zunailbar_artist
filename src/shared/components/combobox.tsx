@@ -26,6 +26,8 @@ type InputType = {
   color?: string;
 };
 
+const normalizeSearchValue = (value: string) => value.toLowerCase();
+
 export function ComboBox<T extends FieldValues>({
   items,
   search,
@@ -100,7 +102,7 @@ export function ComboBox<T extends FieldValues>({
           {search && (
             <CommandInput
               placeholder={pl}
-              onValueChange={search}
+              onValueChange={(value) => search(normalizeSearchValue(value))}
               className="h-9"
             />
           )}

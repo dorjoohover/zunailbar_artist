@@ -56,6 +56,51 @@ export const find = async <T,>(
     };
   }
 };
+export const findRaw = async <T,>(
+  uri: keyof typeof API,
+  p: Pagination = {
+    limit: DEFAULT_LIMIT,
+    page: DEFAULT_PAGE,
+    sort: DEFAULT_SORT,
+  },
+  route?: string
+): Promise<{ data: T | null; error?: string }> => {
+  try {
+    const store = await cookies();
+    const token = store.get("token")?.value;
+    const branch = store.get("branch_id")?.value;
+    const merchant = store.get("merchant_id")?.value;
+
+    const merged: Pagination = {
+      ...defaultPagination,
+      ...p,
+    };
+    const url = paginationToQuery(uri, merged, route);
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+        "branch-id": branch || "",
+        "merchant-id": merchant || "",
+      },
+    });
+
+    if (!res.ok) {
+      return {
+        data: null,
+        error: `Failed to fetch: ${res.status} ${res.statusText}`,
+      };
+    }
+
+    const data = (await res.json()).payload;
+    return { data: data as T };
+  } catch (err) {
+    return {
+      data: null,
+      error: (err as Error).message || "Unknown error occurred",
+    };
+  }
+};
 export const excel = async <T,>(uri: keyof typeof API, p: Pagination = {}) => {
   try {
     const store = await cookies();
@@ -150,7 +195,6 @@ export const deleteOne = async (
     // }
     const data = await res.json();
     if (!res.ok) {
-      console.log(data);
       return { error: (data as Error).message, success: false };
     }
 
@@ -215,7 +259,6 @@ export const create = async <T,>(
     const merchant = store.get("merchant_id")?.value;
 
     const url = `${API[uri]}${route ? `/${route}` : ""}`;
-    console.log(url);
     const res = await fetch(url, {
       cache: "no-store",
       method: METHOD.post,
@@ -229,9 +272,7 @@ export const create = async <T,>(
     });
 
     const data = await res.json();
-    console.log(data);
     if (!res.ok) {
-      console.log(data);
       return { error: (data as Error).message, success: false };
     }
 

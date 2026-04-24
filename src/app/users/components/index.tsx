@@ -7,6 +7,8 @@ import {
   ACTION,
   PG,
   DEFAULT_PG,
+  CUSTOMER_USER_LEVELS,
+  EMPLOYEE_USER_LEVELS,
   getEnumValues,
   Option,
   UserStatusValue,
@@ -56,12 +58,45 @@ type FilterType = {
   level?: number;
 };
 type UserType = z.infer<typeof formSchema>;
+type LevelConfig = {
+  customer: Partial<Record<UserLevel, number>>;
+  employee: Partial<Record<UserLevel, number>>;
+};
+
+const normalizeLevelConfig = (value: any): LevelConfig => ({
+  customer: CUSTOMER_USER_LEVELS.reduce(
+    (acc, level) => {
+      const rawValue = value?.customer?.[level] ?? value?.[level];
+      const fallback = {
+        [UserLevel.BRONZE]: 10,
+        [UserLevel.SILVER]: 20,
+        [UserLevel.GOLD]: 30,
+      }[level];
+      acc[level] = Number(rawValue ?? fallback);
+      return acc;
+    },
+    {
+      [UserLevel.BRONZE]: 10,
+      [UserLevel.SILVER]: 20,
+      [UserLevel.GOLD]: 30,
+    } as Partial<Record<UserLevel, number>>
+  ),
+  employee: EMPLOYEE_USER_LEVELS.reduce(
+    (acc, level) => {
+      const rawValue = value?.employee?.[level] ?? value?.[level];
+      acc[level] = Number(rawValue ?? level);
+      return acc;
+    },
+    {} as Partial<Record<UserLevel, number>>
+  ),
+});
+
 export const UserPage = ({
   data,
   level,
 }: {
   data: ListType<User>;
-  level: Record<UserLevel, number>;
+  level: LevelConfig;
 }) => {
   const [action, setAction] = useState(ACTION.DEFAULT);
   const [open, setOpen] = useState<undefined | boolean>(false);
@@ -208,7 +243,7 @@ export const UserPage = ({
         {
           key: "level",
           label: "Эрэмбэ",
-          items: getEnumValues(UserLevel).map((s) => ({
+          items: CUSTOMER_USER_LEVELS.map((s) => ({
             value: s,
             label: getUserLevelValue[s].name,
           })),
@@ -226,10 +261,13 @@ export const UserPage = ({
 
   const [levelOpen, setLevelOpen] = useState(false);
   const router = useRouter();
-  const [levelValue, setLevelValue] =
-    useState<Record<UserLevel, number>>(level);
+  const normalizedLevel = useMemo(() => normalizeLevelConfig(level), [level]);
+  const [levelValue, setLevelValue] = useState<LevelConfig>(normalizedLevel);
+  useEffect(() => {
+    setLevelValue(normalizedLevel);
+  }, [normalizedLevel]);
   const updateOrderLevel = async () => {
-    const res = await updateOne(Api.order, "level", level);
+    const res = await updateOne(Api.order, "level", levelValue);
     toast(res, false);
     setLevelOpen(false);
     router.refresh();
@@ -242,32 +280,40 @@ export const UserPage = ({
           clear={filterClear}
           filterRight={
             <>
-              <Button onClick={() => setLevelOpen(true)}>Эрэмбэ</Button>
+              <Button onClick={() => setLevelOpen(true)}>
+                Урамшууллын ангилал
+              </Button>
               <Modal
                 open={levelOpen}
                 setOpen={(v) => setLevelOpen(v)}
-                title="Эрэмбэ"
+                title="Урамшууллын ангилал"
                 submit={updateOrderLevel}
               >
-                {Object.entries(levelValue ?? level).map(([k, value], i) => {
-                  const key = k as unknown as UserLevel;
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Үйлчлүүлэгчийн ангиллын босгыг эндээс солино.
+                  </p>
+                  {CUSTOMER_USER_LEVELS.map((key) => {
+                    const lvl = getUserLevelValue[key];
+                    const value = levelValue.customer[key] ?? 0;
 
-                  const lvl = getUserLevelValue[key];
-                  if (lvl)
                     return (
-                      <div key={i} className="mb-2">
+                      <div key={key} className="mb-2">
                         <label className="mb-1">{lvl.name}</label>
                         <TextField
                           props={{
-                            name: k,
+                            name: key.toString(),
                             value,
                             onChange: (e: string) => {
-                              const v = parseInt(e);
+                              const v = parseInt(e, 10);
                               if (isNaN(v)) return;
 
                               setLevelValue((prev) => ({
                                 ...prev,
-                                [k]: v,
+                                customer: {
+                                  ...prev.customer,
+                                  [key]: v,
+                                },
                               }));
                             },
                             ref: () => null,
@@ -276,7 +322,8 @@ export const UserPage = ({
                         />
                       </div>
                     );
-                })}
+                  })}
+                </div>
               </Modal>
             </>
           }
@@ -380,7 +427,7 @@ export const UserPage = ({
                         return (
                           <ComboBox
                             props={{ ...field }}
-                            items={getEnumValues(UserLevel).map((item) => {
+                            items={CUSTOMER_USER_LEVELS.map((item) => {
                               return {
                                 value: item.toString(),
                                 label: getUserLevelValue[item].name,

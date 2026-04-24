@@ -1,5 +1,10 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { mnDateFormat, mobileFormatter, money } from "@/lib/functions";
+import {
+  mnDateFormat,
+  mobileFormatter,
+  money,
+  resolveOrderTimeRange,
+} from "@/lib/functions";
 import { IOrderDetail } from "@/models";
 import { OrderStatus } from "@/lib/enum";
 import { IOrder } from "@/models";
@@ -8,17 +13,17 @@ import { OrderStatusValues } from "@/lib/constants";
 
 export function getColumns(
   onEdit: (product: IOrder) => void,
-  remove: (index: number) => Promise<boolean>
+  remove: (index: number) => Promise<boolean>,
 ): ColumnDef<IOrder>[] {
   return [
     {
       id: "select",
-      header: ({ table }) => <span>№</span>,
-      cell: ({ row }) => <span className="">{row.index + 1}</span>,
+      header: () => <span>№</span>,
+      cell: ({ row }) => <span>{row.index + 1}</span>,
     },
     {
       accessorKey: "details",
-      header: ({ table }) => <span>Гарчиг</span>,
+      header: () => <span>Гарчиг</span>,
       cell: ({ row }) => (
         <div className="font-semibold text-xs whitespace-normal break-words mb-1 max-w-[260px]">
           {(row.getValue("details") as IOrderDetail[])
@@ -43,54 +48,39 @@ export function getColumns(
     },
     {
       accessorKey: "customer",
-      header: ({ table }) => <span>Утасны дугаар</span>,
-      cell: ({ row }) => {
-        return <span className="">
-          {" "}
-          {mobileFormatter((row.getValue("customer") as any)?.mobile ?? "")}
-        </span>;
-      },
+      header: () => <span>Утасны дугаар</span>,
+      cell: ({ row }) => (
+        <span>{mobileFormatter((row.getValue("customer") as any)?.mobile ?? "")}</span>
+      ),
     },
     {
       accessorKey: "order_date",
-      header: ({ table }) => <span>Захиалгын огноо</span>,
-
-      cell: ({ row }) => (
-        <div>
-          <span> {row.getValue("order_date") as string}</span>
-        </div>
-      ),
+      header: () => <span>Захиалгын огноо</span>,
+      cell: ({ row }) => <span>{row.getValue("order_date") as string}</span>,
     },
     {
       accessorKey: "start_time",
-      header: ({ table }) => <span>Эхлэх цаг</span>,
-
-      cell: ({ row }) => (
-        <div>
-          <span> {(row.getValue("start_time") as string).slice(0, 5)}</span>
-        </div>
-      ),
+      header: () => <span>Эхлэх цаг</span>,
+      cell: ({ row }) => {
+        const { start_time } = resolveOrderTimeRange(row.original);
+        return <span>{start_time?.slice(0, 5) ?? "-"}</span>;
+      },
     },
     {
       accessorKey: "end_time",
-      header: ({ table }) => <span>Дуусах цаг</span>,
-
-      cell: ({ row }) => (
-        <div>
-          <span> {(row.getValue("end_time") as string).slice(0, 5)}</span>
-        </div>
-      ),
+      header: () => <span>Дуусах цаг</span>,
+      cell: ({ row }) => {
+        const { end_time } = resolveOrderTimeRange(row.original);
+        return <span>{end_time?.slice(0, 5) ?? "-"}</span>;
+      },
     },
-
     {
       accessorKey: "order_status",
-      header: ({ table }) => <span>Төлөв</span>,
+      header: () => <span>Төлөв</span>,
       cell: ({ row }) => (
-        <div>
-          <span>
-            {OrderStatusValues[row.getValue("order_status") as OrderStatus]}
-          </span>
-        </div>
+        <span>
+          {OrderStatusValues[row.getValue("order_status") as OrderStatus]}
+        </span>
       ),
     },
     {
@@ -98,17 +88,26 @@ export function getColumns(
       header: () => <span>Нийт төлбөр</span>,
       cell: ({ row }) => {
         const total = Number(row.getValue("total_amount") ?? 0);
-        return <span>{money(total.toString())}₮</span>;
+        const discount = Number(row.original.discount ?? 0);
+
+        return (
+          <div className="space-y-1">
+            <span>{money(total.toString())}₮</span>
+            {row.original.voucher_name && (
+              <div className="text-xs text-emerald-700">
+                Урамшуулал: {row.original.voucher_name}
+                {discount > 0 ? ` (-${money(String(discount))}₮)` : ""}
+              </div>
+            )}
+          </div>
+        );
       },
     },
-
     {
       accessorKey: "created_at",
-      header: ({ table }) => <span>Үүсгэсэн огноо</span>,
+      header: () => <span>Үүсгэсэн огноо</span>,
       cell: ({ row }) => {
-        const date = mnDateFormat(
-          new Date(row.getValue("created_at") as string)
-        );
+        const date = mnDateFormat(new Date(row.getValue("created_at") as string));
         return <span>{date}</span>;
       },
     },
@@ -119,8 +118,8 @@ export function getColumns(
         <TableActionButtons
           rowData={row.original}
           onEdit={(data) => onEdit(data)}
-          onRemove={(data) => remove(row.index)}
-        ></TableActionButtons>
+          onRemove={() => remove(row.index)}
+        />
       ),
     },
   ];

@@ -31,7 +31,13 @@ import { OrderStatus, PaymentMethod, UserLevel } from "@/lib/enum";
 import { Branch, IOrder, Service, User } from "@/models";
 import { showToast } from "@/shared/components/showToast";
 import AppDialog from "@/shared/components/appDialog";
-import { mobileFormatter, parseDate, usernameFormatter } from "@/lib/functions";
+import {
+  mobileFormatter,
+  money,
+  parseDate,
+  resolveOrderTimeRange,
+  usernameFormatter,
+} from "@/lib/functions";
 import { CustomEventModal } from "@/types";
 
 const FAMILIES = [
@@ -113,8 +119,24 @@ const PaymentMethodSummary = ({ event }: { event: EventStyledProps }) => {
   );
 };
 
+const VoucherSummary = ({ event }: { event: EventStyledProps }) => {
+  if (!event.voucher_name) return null;
+
+  return (
+    <div className="mb-1 text-xs">
+      <b>
+        Урамшуулал: {event.voucher_name}
+        {Number(event.discount ?? 0) > 0
+          ? ` (-${money(String(event.discount ?? 0))}₮)`
+          : ""}
+      </b>
+    </div>
+  );
+};
+
 interface EventStyledProps extends IOrder {
   minmized?: boolean;
+  parallel?: boolean;
   CustomEventComponent?: React.FC<IOrder>;
 }
 
@@ -141,7 +163,7 @@ export default function EventStyled({
 }) {
   const { setOpen } = useModal();
 
-  function handleEditEvent(event: IOrder) {
+  function handleEditEvent(event: EventStyledProps) {
     setOpen(
       <CustomModal title="Захиалга засах">
         <AddEventModal
@@ -149,7 +171,9 @@ export default function EventStyled({
           items={values}
           values={{
             ...event,
-            parallel: new Set(event.details?.map((d) => d.user_id)).size > 1,
+            parallel:
+              event.parallel ??
+              new Set(event.details?.map((d) => d.user_id)).size > 1,
             edit: event.id,
           }}
         />
@@ -169,15 +193,20 @@ export default function EventStyled({
 
   const color = event?.details?.[0]?.color;
   const secondColor = event?.details?.[1]?.color;
+  const detailCount = event.details?.length ?? 0;
+  const isParallelOrder = event.parallel === true && detailCount > 1;
+  const isQueueOrder = event.parallel !== true && detailCount > 1;
+  const { start_time: eventStartTime, end_time: eventEndTime } =
+    resolveOrderTimeRange(event);
   const level =
     getUserLevelValue[(event.customer?.level as UserLevel) ?? UserLevel.BRONZE];
   const ref = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
-  const hour = +(event.start_time?.slice(0, 2) ?? "0");
+  const hour = +(eventStartTime?.slice(0, 2) ?? "0");
   const baseZ =
     Math.ceil(1 * hour) +
     index +
-    ((event?.start_time?.slice(3, 4) ?? "0") == "0" ? 0 : 1);
+    ((eventStartTime?.slice(3, 4) ?? "0") == "0" ? 0 : 1);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -380,6 +409,7 @@ export default function EventStyled({
           </div>
         )}
         <PaymentMethodSummary event={event} />
+        <VoucherSummary event={event} />
       </div>
 
       <div
@@ -391,9 +421,9 @@ export default function EventStyled({
         role="button"
         aria-expanded={isExpanded}
       >
-        {[...new Set(event.details?.map((d) => d.user_id))].length > 1 ? (
+        {isParallelOrder ? (
           <div
-            className="flex bg-transparent h-full"
+            className="flex bg-transparent h-full relative"
             style={{
               background: `linear-gradient(
     100deg,
@@ -404,6 +434,7 @@ export default function EventStyled({
               boxShadow: `0 1px 3px ${getBackgroundColor(secondColor)}`,
             }}
           >
+            <EventModeBadge label="Зэрэг" />
             <div className={cn("w-full p-2 text-white rounded-lg h-full  ")}>
               <EventItem
                 color={getBackgroundColor(color)}
@@ -413,7 +444,7 @@ export default function EventStyled({
                   lvl: true,
                   status: true,
                 }}
-                parallel={true}
+                mode="parallel"
               />
             </div>
             <div
@@ -429,7 +460,7 @@ export default function EventStyled({
                 disableView={{
                   name: true,
                 }}
-                parallel={true}
+                mode="parallel"
               />
             </div>
           </div>
@@ -442,8 +473,14 @@ export default function EventStyled({
               event?.minmized ? "flex-grow overflow-hidden" : "min-h-fit",
             )}
             style={{
-              background: getBackgroundColor(color),
+              backgroundColor: getBackgroundColor(color),
+              backgroundImage: isQueueOrder
+                ? "repeating-linear-gradient(135deg, rgba(255,255,255,0.18) 0 8px, transparent 8px 16px)"
+                : undefined,
               boxShadow: `0 1px 3px 0px ${getBackgroundColor(color)}`,
+              border: isQueueOrder
+                ? "1px dashed rgba(255,255,255,0.65)"
+                : undefined,
             }}
           >
             <EventItem
@@ -451,6 +488,7 @@ export default function EventStyled({
               event={event}
               level={level}
               expanded={isExpanded}
+              mode={isQueueOrder ? "queue" : "single"}
             />
           </div>
         )}
@@ -459,11 +497,17 @@ export default function EventStyled({
   );
 }
 
+const EventModeBadge = ({ label }: { label: string }) => (
+  <span className="absolute right-2 top-2 z-10 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 shadow-sm">
+    {label}
+  </span>
+);
+
 const EventItem = ({
   event,
   level,
   color,
-  parallel = false,
+  mode = "single",
   disableView,
   expanded = false,
 }: {
@@ -475,10 +519,14 @@ const EventItem = ({
     lvl?: boolean;
     status?: boolean;
   };
-  parallel?: boolean;
+  mode?: "single" | "parallel" | "queue";
   expanded?: boolean;
 }) => {
   const { name, lvl, status } = disableView ?? {};
+  const { start_time: eventStartTime, end_time: eventEndTime } =
+    resolveOrderTimeRange(event);
+  const isParallel = mode === "parallel";
+  const isQueue = mode === "queue";
   return (
     <div className="flex flex-col h-full">
       <div className="flex">
@@ -499,7 +547,12 @@ const EventItem = ({
               {!status &&
                 event?.order_status &&
                 OrderStatusValues[event?.order_status as OrderStatus]}
-              {!parallel && (
+              {isQueue && (
+                <span className="rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-bold text-slate-700 shadow-sm">
+                  Дараалал
+                </span>
+              )}
+              {!isParallel && (
                 <div className="flex items-center opacity-80">
                   {expanded ? (
                     <ChevronUp size={14} />
@@ -519,13 +572,23 @@ const EventItem = ({
               key={i}
               className={cn(
                 "flex justify-between gap-2 my-1",
-                parallel && "flex-col ",
+                isParallel && "flex-col ",
+                isQueue &&
+                  "rounded-md border border-white/20 bg-white/10 px-2 py-1",
               )}
             >
               <div className="flex items-center gap-1">
+                {isQueue && (
+                  <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-white/85 text-[10px] font-bold text-slate-700">
+                    {i + 1}
+                  </span>
+                )}
                 <p className="text-wrap">{e.service_name ?? "-"}</p>
               </div>
-              <div className="flex">
+              <div className="flex flex-col items-start gap-0.5 sm:items-end">
+                {isQueue && e.nickname && (
+                  <span className="text-[10px] opacity-90">{e.nickname}</span>
+                )}
                 <div className="flex text-xs items-center gap-1">
                   <Clock size={12} />{" "}
                   <span> {e?.start_time?.slice(0, 5)} - </span>
@@ -542,6 +605,16 @@ const EventItem = ({
           <b>Tip message:</b> {event?.description}{" "}
         </div>
       )}
+      {event.voucher_name && (
+        <div className="mb-1 text-xs">
+          <b>
+            Урамшуулал: {event.voucher_name}
+            {Number(event.discount ?? 0) > 0
+              ? ` (-${money(String(event.discount ?? 0))}₮)`
+              : ""}
+          </b>
+        </div>
+      )}
 
       {event?.paid_at && (
         <div className="mb-1 text-xs">
@@ -549,13 +622,13 @@ const EventItem = ({
         </div>
       )}
       {/* <PaymentMethodSummary event={event} /> */}
-      {event?.minmized && !parallel && (
+      {event?.minmized && !isParallel && (
         <div className="flex flex-col">
           <div className="text-[10px] flex justify-between">
             <div className="flex text-xs items-center gap-1">
               <Clock size={12} />{" "}
-              <span> {event?.start_time?.slice(0, 5)} - </span>
-              <span> {event?.end_time?.slice(0, 5)} </span>
+              <span> {eventStartTime?.slice(0, 5)} - </span>
+              <span> {eventEndTime?.slice(0, 5)} </span>
             </div>
             <span className="opacity-80"></span>
           </div>
@@ -569,11 +642,11 @@ const EventItem = ({
         <div className="text-xs space-y-1 mt-2">
           <div className="flex items-center">
             <CalendarIcon className="mr-1 h-3 w-3" />
-            {event.start_time}
+            {eventStartTime}
           </div>
           <div className="flex items-center">
             <ClockIcon className="mr-1 h-3 w-3" />
-            {event?.end_time}
+            {eventEndTime}
           </div>
         </div>
       )}

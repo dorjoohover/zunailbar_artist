@@ -21,6 +21,8 @@ import { ControllerRenderProps, FieldValues } from "react-hook-form";
 
 type Item = { value: string; label: string };
 
+const normalizeSearchValue = (value: string) => value.toLowerCase();
+
 export function MultiSelect<T extends FieldValues>({
   items,
   props,
@@ -85,7 +87,7 @@ export function MultiSelect<T extends FieldValues>({
           {search && (
             <CommandInput
               placeholder="Хайх..."
-              onValueChange={(e) => search(e)}
+              onValueChange={(value) => search(normalizeSearchValue(value))}
             />
           )}
           <CommandList>

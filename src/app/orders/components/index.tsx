@@ -88,7 +88,9 @@ export const OrderPage = ({
     let index = date.getDay() - 1;
     index = index == -1 ? 6 : index;
     const schedule = await search<Schedule>(Api.schedule, { index });
-    const scheduleItems = schedule.data ?? [];
+    const scheduleItems = (schedule.data ?? []).filter((item) =>
+      Boolean(item.value && `${item.value}`.trim()),
+    );
     const scheduledUserIds = new Set(
       scheduleItems.map((s) => s.user_id).filter(Boolean),
     );
@@ -171,15 +173,6 @@ export const OrderPage = ({
     const { edit, ...body } = e as any;
 
     const payload = { ...body };
-    const details = payload.details;
-    if (details.length == 1) {
-      payload.details = details.map((d: any) => {
-        return {
-          price: body.total_amount,
-          ...d,
-        };
-      });
-    }
     const res = edit
       ? await updateOne<Order>(
           Api.order,

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import TooltipWrapper from "@/components/tooltipWrapper";
 import {
+  CUSTOMER_USER_LEVELS,
   getEnumValues,
   getUserLevelValue,
   UserStatusValue,
@@ -138,7 +139,7 @@ export function getColumns(
               <DropdownMenuContent>
                 <DropdownMenuLabel>Эрэмбэ солих</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {getEnumValues(UserLevel).map((item, i) => {
+                {CUSTOMER_USER_LEVELS.map((item, i) => {
                   const status = getUserLevelValue[item];
                   return (
                     <DropdownMenuItem

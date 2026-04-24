@@ -26,6 +26,7 @@ import {
   mnDate,
   mnDateFormat,
   mnDateFormatTitle,
+  resolveOrderTimeRange,
   totalHours,
   toTimeString,
 } from "@/lib/functions";
@@ -213,15 +214,28 @@ export default function DailyView({
   const [direction, setDirection] = useState<number>(0);
   const { setOpen } = useModal();
   const { handlers } = useScheduler();
+  const normalizedEvents = useMemo(
+    () =>
+      events.map((event) => {
+        const range = resolveOrderTimeRange(event);
+        return {
+          ...event,
+          start_time: range.start_time ?? event.start_time,
+          end_time: range.end_time ?? event.end_time,
+        };
+      }),
+    [events],
+  );
   const orderMap = useMemo(() => {
     const map = new Map<string, Order[]>();
-    events.forEach((ev) => {
-      const arr = map.get(ev.start_time) ?? [];
+    normalizedEvents.forEach((ev) => {
+      const key = ev.start_time ?? "";
+      const arr = map.get(key) ?? [];
       arr.push(ev);
-      map.set(ev.start_time, arr);
+      map.set(key, arr);
     });
     return map;
-  }, [events]);
+  }, [normalizedEvents]);
 
   const getFormattedDayTitle = useCallback(
     () => mnDateFormatTitle(mnDateFormat(currentDate)),
@@ -388,17 +402,16 @@ export default function DailyView({
                 )}
 
                 <AnimatePresence initial={false}>
-                  {events && events?.length
-                    ? events.map((event, eventIndex) => {
-                      
-                        const group = orderMap.get(event.start_time) ?? []; // эсвэл orderMap[event.start_time]
-                        const eventsInSamePeriod = group.length;
-                        const periodIndex = group.findIndex(
+                  {normalizedEvents && normalizedEvents?.length
+                    ? normalizedEvents.map((event, eventIndex) => {
+                      const group = orderMap.get(event.start_time) ?? []; // эсвэл orderMap[event.start_time]
+                      const eventsInSamePeriod = group.length;
+                      const periodIndex = group.findIndex(
                           (e) => e.id === event.id,
                         );
 
                         const { height, left, top, zIndex } =
-                          handlers.handleEventStyling(event, events, {
+                          handlers.handleEventStyling(event, normalizedEvents, {
                             eventsInSamePeriod,
                             periodIndex,
                             adjustForPeriod: true,

@@ -1,26 +1,26 @@
+import { UserLevel, VoucherStatus, VOUCHER } from "@/lib/enum";
+
 export interface IVoucher {
-  id: string;
+  id?: string;
   user_id: string;
-  service_id: string;
   name: string;
-  service_name: string;
-  user_name: string;
-  status: number;
-  type: number;
-  updated_at?: Date;
-  created_at?: Date;
-}
-export interface Voucher {
-  id: string;
-  user_id: string;
-  service_id: string;
-  name: string;
-  service_name: string;
-  user_name: string;
-  status: number;
-  type: number;
-  updated_at?: Date;
-  created_at?: Date;
+  type: VOUCHER;
+  value: number;
+  level?: UserLevel | null;
+  voucher_status?: VoucherStatus;
+  used_order_id?: string | null;
+  used_order_date?: string | null;
+  used_at?: Date | string | null;
+  user_name?: string;
+  mobile?: string | null;
+  note?: string | null;
+  status?: number;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 }
 
-// ajiltnii service
+export interface Voucher extends IVoucher {
+  id: string;
+  voucher_status: VoucherStatus;
+  status: number;
+}

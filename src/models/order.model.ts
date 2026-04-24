@@ -32,6 +32,11 @@ export interface IOrder {
   transaction_type?: string;
   pre_method?: PaymentMethod;
   method?: PaymentMethod;
+  voucher_id?: string | null;
+  voucher_name?: string | null;
+  voucher_value?: number | null;
+  discount?: number;
+  discount_type?: number | null;
 }
 export interface Order {
   id: string;
@@ -58,6 +63,11 @@ export interface Order {
   transaction_type?: string;
   method?: PaymentMethod;
   pre_method?: PaymentMethod;
+  voucher_id?: string | null;
+  voucher_name?: string | null;
+  voucher_value?: number | null;
+  discount?: number;
+  discount_type?: number | null;
 }
 
 export interface IOrderDetail {
@@ -66,6 +76,7 @@ export interface IOrderDetail {
   service_id: string;
   description?: string;
   price?: number;
+  original_price?: number;
   max_price?: number;
   min_price?: number;
   service_name?: string;
