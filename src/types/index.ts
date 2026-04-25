@@ -189,6 +189,11 @@ export const eventSchema = z.object({
     label: "Урамшууллын дүн",
     allowNullable: true,
   }),
+  discount: zNumOpt({
+    value: 0,
+    label: "Хөнгөлөлт",
+    allowNullable: true,
+  }),
   discount_type: z
     .preprocess(
       (val) => (typeof val === "string" ? parseInt(val, 10) : val),

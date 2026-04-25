@@ -66,6 +66,7 @@ const defaultValues = {
   voucher_id: null,
   voucher_name: undefined,
   voucher_value: 0,
+  discount: 0,
   discount_type: undefined,
 };
 type ListFieldProps<T> = {
@@ -89,6 +90,14 @@ const calculateDuration = (details: any[], parallel?: boolean | null) => {
 const sumPrices = (details: any[]) =>
   details.reduce((sum, d) => sum + Number(d.price || 0), 0);
 
+const normalizePriceValue = (value?: unknown) => {
+  const amount = Number(value ?? 0);
+
+  if (!Number.isFinite(amount)) return 0;
+
+  return Math.max(amount, 0);
+};
+
 const calculateVoucherDiscount = (
   subtotal: number,
   voucher?: Pick<Voucher, "type" | "value"> | null,
@@ -105,6 +114,71 @@ const calculateVoucherDiscount = (
   }
 
   return Math.min(total, value);
+};
+
+const normalizeOrderDetailPrices = <T extends { price?: unknown }>(
+  details: T[],
+  orderTotal?: number | null,
+  orderDiscount?: number | null,
+) => {
+  if (!Array.isArray(details) || details.length === 0) return [];
+
+  const normalizedDetails = details.map((detail) => ({
+    ...detail,
+    price: normalizePriceValue(detail?.price),
+  }));
+  const subtotal = normalizedDetails.reduce(
+    (sum, detail) => sum + Number(detail.price ?? 0),
+    0,
+  );
+
+  if (subtotal <= 0) return normalizedDetails;
+
+  const expectedTotal = normalizePriceValue(orderTotal);
+  const expectedDiscount = normalizePriceValue(orderDiscount);
+  const hasExpectedTotal =
+    orderTotal != null && Number.isFinite(Number(orderTotal));
+  const discountToApply = Math.min(
+    subtotal,
+    Math.max(
+      0,
+      hasExpectedTotal && expectedTotal < subtotal
+        ? subtotal - expectedTotal
+        : expectedDiscount,
+    ),
+  );
+
+  if (discountToApply <= 0) return normalizedDetails;
+
+  const discountable = normalizedDetails
+    .map((detail, index) => ({
+      index,
+      price: Number(detail.price ?? 0),
+    }))
+    .filter((detail) => detail.price > 0);
+
+  if (!discountable.length) return normalizedDetails;
+
+  let distributed = 0;
+  const shares = new Map<number, number>();
+
+  discountable.forEach((detail, index) => {
+    const share =
+      index === discountable.length - 1
+        ? discountToApply - distributed
+        : Math.min(
+            detail.price,
+            Math.round((detail.price / subtotal) * discountToApply),
+          );
+
+    distributed += share;
+    shares.set(detail.index, share);
+  });
+
+  return normalizedDetails.map((detail, index) => ({
+    ...detail,
+    price: Math.max(Number(detail.price ?? 0) - (shares.get(index) ?? 0), 0),
+  }));
 };
 
 const resolveEditBasePrices = ({
@@ -132,11 +206,11 @@ const resolveEditBasePrices = ({
     const service = services.find((item) => item.id === detail?.service_id);
     const finalPrice = Number(detail?.price ?? 0);
     const fallback = Number(
-      detail?.min_price ?? service?.min_price ?? finalPrice ?? 0,
+      detail?.price ?? detail?.min_price ?? service?.min_price ?? 0,
     );
 
     if (totalDiscount <= 0 || discountedTotal <= 0 || finalPrice <= 0) {
-      return fallback;
+      return finalPrice > 0 ? finalPrice : fallback;
     }
 
     const share =
@@ -152,6 +226,7 @@ const resolveEditBasePrices = ({
 type DetailType = {
   service_id: string;
   service_name: string;
+  category_id?: string | null | undefined;
   duration: unknown;
   description?: string | null | undefined;
   price?: number | null | undefined;
@@ -160,6 +235,8 @@ type DetailType = {
   original_price?: number | null | undefined;
   user_id?: string | null | undefined;
 };
+
+const EMPTY_DETAILS: DetailType[] = [];
 export default function AddEventModal({
   // CustomAddEventModal,
   items,
@@ -381,9 +458,32 @@ export default function AddEventModal({
   });
 
   const onSubmit: SubmitHandler<EventFormData> = (formData) => {
+    const normalizedDetails = (formData.details ?? []).map((detail) => ({
+      ...detail,
+      price: normalizePriceValue(detail?.price),
+    }));
+    const detailSubtotal = sumPrices(normalizedDetails);
+    const normalizedDiscount = Math.min(
+      normalizePriceValue(formData.discount ?? 0),
+      detailSubtotal,
+    );
+    const rawPreAmount = normalizePriceValue(formData.pre_amount ?? 0);
+    const normalizedTotalAmount = Math.max(
+      detailSubtotal - normalizedDiscount,
+      rawPreAmount,
+      0,
+    );
+    const normalizedPreAmount = Math.min(
+      rawPreAmount,
+      normalizedTotalAmount,
+    );
+    const normalizedPaidAmount = Math.max(
+      normalizedTotalAmount - normalizedPreAmount,
+      0,
+    );
     const newEvent = {
       branch_id: formData.branch_id,
-      details: formData.details,
+      details: normalizedDetails,
       order_date: formData.order_date as string,
       start_time: formData.start_time,
       end_time: formData.end_time,
@@ -391,12 +491,13 @@ export default function AddEventModal({
       description: formData.description ?? undefined,
       customer_id: formData.customer_id,
       order_status: formData.order_status as OrderStatus | undefined,
-      total_amount: formData.total_amount as number | undefined,
-      paid_amount: +(formData.paid_amount ?? 0),
-      pre_amount: +(formData.pre_amount ?? 0),
+      total_amount: normalizedTotalAmount,
+      paid_amount: normalizedPaidAmount,
+      pre_amount: normalizedPreAmount,
       voucher_id: formData.voucher_id ?? null,
       voucher_name: formData.voucher_name ?? undefined,
       voucher_value: Number(formData.voucher_value ?? 0) || undefined,
+      discount: normalizedDiscount,
       discount_type: formData.discount_type ?? undefined,
       method: formData.method
         ? +formData.method.toString().slice(0, 2)
@@ -444,6 +545,23 @@ export default function AddEventModal({
       return;
     }
 
+    if (key === "price") {
+      const normalizedPrice =
+        value == null || value === "" ? undefined : normalizePriceValue(value);
+      const updated = current.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              price: normalizedPrice,
+              original_price: normalizedPrice,
+            }
+          : item,
+      );
+
+      form.setValue("details", updated);
+      return;
+    }
+
     const updated = current.map((item, i) =>
       i === index ? { ...item, [key]: value } : item,
     );
@@ -457,10 +575,11 @@ export default function AddEventModal({
       current.map((item) => ({ ...item, user_id: undefined })),
     );
   };
+  const watchedValues = useWatch<EventFormData>({ control: form.control });
   const {
     branch_id: branchId,
     customer_id: customerId,
-    details = [],
+    details: watchedDetails,
     parallel,
     paid_amount = 0,
     total_amount = 0,
@@ -469,7 +588,17 @@ export default function AddEventModal({
     start_time,
     duration,
     voucher_id,
-  } = useWatch<EventFormData>({ control: form.control });
+    discount = 0,
+  } = watchedValues;
+  const details = watchedDetails ?? EMPTY_DETAILS;
+  const setFormValueIfChanged = (
+    name: keyof EventFormData,
+    value: any,
+    options?: any,
+  ) => {
+    if (form.getValues(name as any) === value) return;
+    form.setValue(name as any, value, options);
+  };
   const isDurationInitialized = useRef(false);
 
   useEffect(() => {
@@ -485,7 +614,7 @@ export default function AddEventModal({
       const service = services.items.find((s) => s.id === v.service_id);
       const basePrice =
         basePrices[index] ??
-        Number(v?.original_price ?? service?.min_price ?? v?.price ?? 0);
+        Number(v?.original_price ?? v?.price ?? service?.min_price ?? 0);
       return {
         id: v.id,
         service_id: service?.id ?? "",
@@ -558,10 +687,11 @@ export default function AddEventModal({
       if (!customerId) {
         setAvailableVouchers([]);
         setVoucherLoading(false);
-        form.setValue("voucher_id", null, { shouldDirty: true });
-        form.setValue("voucher_name", undefined);
-        form.setValue("voucher_value", 0);
-        form.setValue("discount_type", undefined);
+        setFormValueIfChanged("voucher_id", null, { shouldDirty: true });
+        setFormValueIfChanged("voucher_name", undefined);
+        setFormValueIfChanged("voucher_value", 0);
+        setFormValueIfChanged("discount", 0);
+        setFormValueIfChanged("discount_type", undefined);
         return;
       }
 
@@ -602,18 +732,27 @@ export default function AddEventModal({
     const selectedVoucher = availableVouchers.find((item) => item.id === voucher_id);
     if (!selectedVoucher) {
       if (voucher_id) {
-        form.setValue("voucher_id", null, { shouldDirty: true });
+        setFormValueIfChanged("voucher_id", null, { shouldDirty: true });
       }
-      form.setValue("voucher_name", undefined);
-      form.setValue("voucher_value", 0);
-      form.setValue("discount_type", undefined);
+      setFormValueIfChanged("voucher_name", undefined);
+      setFormValueIfChanged("voucher_value", 0);
+      setFormValueIfChanged("discount", 0);
+      setFormValueIfChanged("discount_type", undefined);
       return;
     }
 
-    form.setValue("voucher_name", selectedVoucher.name ?? undefined);
-    form.setValue("voucher_value", Number(selectedVoucher.value ?? 0));
-    form.setValue("discount_type", selectedVoucher.type);
-  }, [availableVouchers, form, voucher_id, voucherLoading]);
+    setFormValueIfChanged("voucher_name", selectedVoucher.name ?? undefined);
+    setFormValueIfChanged("voucher_value", Number(selectedVoucher.value ?? 0));
+    const detailSubtotal = details.reduce(
+      (sum, detail) => sum + Number(detail?.price ?? 0),
+      0,
+    );
+    setFormValueIfChanged(
+      "discount",
+      calculateVoucherDiscount(detailSubtotal, selectedVoucher),
+    );
+    setFormValueIfChanged("discount_type", selectedVoucher.type);
+  }, [availableVouchers, details, form, voucher_id, voucherLoading]);
   useEffect(() => {
     let cancelled = false;
 
@@ -696,36 +835,92 @@ export default function AddEventModal({
   }, [isTimeSlotsEnabled]);
 
   useEffect(() => {
-    const serviceTotal = sumPrices(details);
-    const selectedVoucher = availableVouchers.find((item) => item.id === voucher_id);
-    const voucherDiscount = calculateVoucherDiscount(serviceTotal, selectedVoucher);
-    const calculatedTotal =
-      serviceTotal === 0
-        ? Number(pre_amount || 0) + Number(paid_amount || 0)
-        : Math.max(serviceTotal - voucherDiscount, 0);
-    const normalizedPreAmount = Math.min(Number(pre_amount || 0), calculatedTotal);
-    const nextPaidAmount = Math.max(calculatedTotal - normalizedPreAmount, 0);
-    const currentTotal = Number(total_amount || 0);
+    if (!details.length) {
+      const preservedTotal = Math.max(
+        isEdit ? normalizePriceValue(total_amount) : 0,
+        normalizePriceValue(pre_amount),
+      );
 
-    if (currentTotal !== calculatedTotal) {
-      form.setValue("total_amount", calculatedTotal, {
+      setFormValueIfChanged("total_amount", preservedTotal, {
         shouldDirty: true,
         shouldTouch: false,
       });
-    }
-    if (Number(pre_amount || 0) !== normalizedPreAmount) {
-      form.setValue("pre_amount", normalizedPreAmount, {
+
+      const normalizedPreAmount = Math.min(
+        normalizePriceValue(pre_amount),
+        preservedTotal,
+      );
+      const nextPaidAmount = Math.max(preservedTotal - normalizedPreAmount, 0);
+
+      if (isEdit) {
+        setFormValueIfChanged("pre_amount", normalizedPreAmount, {
+          shouldDirty: true,
+          shouldTouch: false,
+        });
+      }
+      setFormValueIfChanged("paid_amount", nextPaidAmount, {
         shouldDirty: true,
         shouldTouch: false,
       });
+
+      return;
     }
-    if (Number(paid_amount || 0) !== nextPaidAmount) {
-      form.setValue("paid_amount", nextPaidAmount, {
+
+    const serviceTotal = sumPrices(details);
+    const selectedVoucher = availableVouchers.find(
+      (item) => item.id === voucher_id,
+    );
+    const effectiveDiscount = selectedVoucher
+      ? calculateVoucherDiscount(serviceTotal, selectedVoucher)
+      : normalizePriceValue(discount);
+    const discountedDetails = normalizeOrderDetailPrices(
+      details as DetailType[],
+      Math.max(serviceTotal - effectiveDiscount, 0),
+      effectiveDiscount,
+    );
+    const calculatedTotal = sumPrices(discountedDetails);
+    const nextTotalAmount = Math.max(
+      calculatedTotal,
+      normalizePriceValue(pre_amount),
+    );
+    if (nextTotalAmount <= 0) {
+      setFormValueIfChanged("total_amount", 0, {
         shouldDirty: true,
         shouldTouch: false,
       });
+      setFormValueIfChanged("paid_amount", 0, {
+        shouldDirty: true,
+        shouldTouch: false,
+      });
+      return;
     }
-  }, [availableVouchers, details, paid_amount, pre_amount, total_amount, voucher_id]);
+    const normalizedPreAmount = Math.min(
+      normalizePriceValue(pre_amount),
+      nextTotalAmount,
+    );
+    const nextPaidAmount = Math.max(nextTotalAmount - normalizedPreAmount, 0);
+    setFormValueIfChanged("total_amount", nextTotalAmount, {
+      shouldDirty: true,
+      shouldTouch: false,
+    });
+    setFormValueIfChanged("pre_amount", normalizedPreAmount, {
+      shouldDirty: true,
+      shouldTouch: false,
+    });
+    setFormValueIfChanged("paid_amount", nextPaidAmount, {
+      shouldDirty: true,
+      shouldTouch: false,
+    });
+  }, [
+    availableVouchers,
+    details,
+    discount,
+    paid_amount,
+    pre_amount,
+    total_amount,
+    voucher_id,
+    isEdit,
+  ]);
   useEffect(() => {
     if (!start_time || !duration) return;
 
@@ -893,6 +1088,7 @@ export default function AddEventModal({
                     form.setValue("voucher_id", null, { shouldDirty: true });
                     form.setValue("voucher_name", undefined);
                     form.setValue("voucher_value", 0);
+                    form.setValue("discount", 0);
                     form.setValue("discount_type", undefined);
                   }}
                 >
@@ -949,6 +1145,7 @@ export default function AddEventModal({
                           "voucher_value",
                           selected ? 0 : Number(voucher.value ?? 0),
                         );
+                        form.setValue("discount", selected ? 0 : discount);
                         form.setValue(
                           "discount_type",
                           selected ? undefined : voucher.type,
@@ -1161,12 +1358,12 @@ export default function AddEventModal({
                             duration: service.duration,
                             category_id: service.category_id,
                             description: "",
-                            price: Number(service.min_price ?? 0),
+                            price: undefined,
                             min_price: Number(service.min_price ?? 0),
                             max_price: Number(
                               service.max_price ?? service.min_price ?? 0,
                             ),
-                            original_price: Number(service.min_price ?? 0),
+                            original_price: undefined,
                             user_id: "",
                           });
                         }}
