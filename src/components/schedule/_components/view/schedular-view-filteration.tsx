@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import {
   ACTION,
   getEnumValues,
-  getUserLevelValue,
   ListType,
   OrderStatusValues,
   SearchType,
@@ -151,6 +150,7 @@ export default function ({
     customer: SearchType<User>[];
     user: SearchType<User>[];
     artists: SearchType<User>[];
+    filterArtists?: SearchType<User>[];
     service: ListType<Service>;
   };
   views?: Views;
@@ -328,7 +328,7 @@ export default function ({
                   ref: () => null,
                   value: filter?.artist,
                 }}
-                items={values.artists.map((item) => {
+                items={(values.filterArtists ?? values.artists).map((item) => {
                   const [mobile, nickname] = item?.value?.split("__") ?? [
                     "",
                     "",
@@ -452,21 +452,6 @@ export default function ({
                         </FormItems>
                       );
                     })}
-                    <FormItems label="Эрэмбэ" control={form.control} name="level">
-                      {(field) => {
-                        return (
-                          <ComboBox
-                            props={{ ...field }}
-                            items={getEnumValues(UserLevel).map((item) => {
-                              return {
-                                value: item.toString(),
-                                label: getUserLevelValue[item].name,
-                              };
-                            })}
-                          />
-                        );
-                      }}
-                    </FormItems>
                     <FormItems
                       control={form.control}
                       name="password"

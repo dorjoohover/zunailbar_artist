@@ -37,6 +37,7 @@ export interface IOrder {
   voucher_value?: number | null;
   discount?: number;
   discount_type?: number | null;
+  salary_date?: string | Date | null;
 }
 export interface Order {
   id: string;
@@ -68,6 +69,7 @@ export interface Order {
   voucher_value?: number | null;
   discount?: number;
   discount_type?: number | null;
+  salary_date?: string | Date | null;
 }
 
 export interface IOrderDetail {

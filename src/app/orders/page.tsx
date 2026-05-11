@@ -1,10 +1,10 @@
 import { Api } from "@/utils/api";
-import { find, search } from "../(api)";
+import { search } from "../(api)";
 import { Service } from "@/models/service.model";
 import { OrderPage } from "./components";
 import { Branch, User } from "@/models";
 import { ROLE, UserStatus } from "@/lib/enum";
-import { Slot } from "@/models/slot.model";
+import { find } from "../(api)";
 
 export default async function Page() {
   const [branch, user, services] = await Promise.all([
@@ -14,14 +14,14 @@ export default async function Page() {
       role: ROLE.E_M,
       user_status: UserStatus.ACTIVE,
     }),
-
-    find<Service>(Api.service, { limit: 20, sort: false, }),
+    find<Service>(Api.service, { limit: 20, sort: false }),
   ]);
 
   const client = await search<User>(Api.user, { limit: 20, role: ROLE.CLIENT });
+  // /order/level нь admin-only тул artist app-аас дуудахгүй —
+  // SchedulerViewFilteration дотор LevelConfig undefined үед default нэрс ашиглана.
   return (
     <section>
-      {/* <div className="admin-container"> */}
       <OrderPage
         branches={branch.data}
         users={user.data}
@@ -29,7 +29,6 @@ export default async function Page() {
         services={services.data}
         showConfirmButton={false}
       />
-      {/* </div> */}
     </section>
   );
 }

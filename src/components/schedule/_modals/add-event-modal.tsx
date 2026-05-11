@@ -237,6 +237,22 @@ type DetailType = {
 };
 
 const EMPTY_DETAILS: DetailType[] = [];
+
+const hasSalaryProcessDate = (value?: string | Date | null) => {
+  if (value == null) return false;
+
+  if (value instanceof Date) {
+    return !Number.isNaN(value.getTime());
+  }
+
+  const normalized = `${value}`.trim().toLowerCase();
+  if (!normalized || normalized === "null" || normalized === "undefined") {
+    return false;
+  }
+
+  return !Number.isNaN(new Date(value).getTime());
+};
+
 export default function AddEventModal({
   // CustomAddEventModal,
   items,
@@ -429,7 +445,9 @@ export default function AddEventModal({
   });
 
   const isEdit = Boolean(values?.id);
-  const isSalaryClosed = Boolean(values?.id && values?.salary_date);
+  const isSalaryProcessed = Boolean(
+    values?.id && hasSalaryProcessDate(values?.salary_date),
+  );
   const hasId = values?.id !== undefined;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -955,10 +973,10 @@ export default function AddEventModal({
           </div>
         </div>
       )}
-      {isSalaryClosed && (
+      {isSalaryProcessed && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Энэ захиалгыг admin хаасан тул артист талаас дүн, үйлчилгээ, артист,
-          төлбөрийн мэдээлэл өөрчлөх боломжгүй.
+          Энэ захиалга цалин бодолтод орсон тул артист талаас дүн, үйлчилгээ,
+          артист, төлбөрийн мэдээлэл өөрчлөх боломжгүй.
         </div>
       )}
       <FormProvider {...form}>
@@ -1052,7 +1070,7 @@ export default function AddEventModal({
               return (
                 <div
                   className={
-                    isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                    isSalaryProcessed ? "pointer-events-none opacity-60" : ""
                   }
                 >
                   <ComboBox
@@ -1083,7 +1101,7 @@ export default function AddEventModal({
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={isSalaryClosed}
+                  disabled={isSalaryProcessed}
                   onClick={() => {
                     form.setValue("voucher_id", null, { shouldDirty: true });
                     form.setValue("voucher_name", undefined);
@@ -1112,7 +1130,7 @@ export default function AddEventModal({
             ) : (
               <div
                 className={`grid gap-2 md:grid-cols-2 ${
-                  isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                  isSalaryProcessed ? "pointer-events-none opacity-60" : ""
                 }`}
               >
                 {availableVouchers.map((voucher) => {
@@ -1199,7 +1217,7 @@ export default function AddEventModal({
                 return (
                   <TextField
                     type={INPUT_TYPE.MONEY}
-                    disabled={isSalaryClosed}
+                    disabled={isSalaryProcessed}
                     props={{ ...field }}
                   />
                 );
@@ -1232,7 +1250,7 @@ export default function AddEventModal({
                 return (
                   <div
                     className={
-                      isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                      isSalaryProcessed ? "pointer-events-none opacity-60" : ""
                     }
                   >
                     <ComboBox
@@ -1265,7 +1283,7 @@ export default function AddEventModal({
                 return (
                   <div
                     className={
-                      isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                      isSalaryProcessed ? "pointer-events-none opacity-60" : ""
                     }
                   >
                     <ComboBox
@@ -1293,7 +1311,7 @@ export default function AddEventModal({
           <p className="my-2 font-bold">Үйлчилгээ</p>
           <div
             className={`grid grid-cols-2 gap-1 max-h-[220px] overflow-auto ${
-              isSalaryClosed ? "pointer-events-none opacity-60" : ""
+              isSalaryProcessed ? "pointer-events-none opacity-60" : ""
             }`}
           >
             {loader[Api.service] ? (
@@ -1478,7 +1496,7 @@ export default function AddEventModal({
                 details?.[0].category_id != details?.[1].category_id && (
                   <div
                     className={
-                      isSalaryClosed ? "pointer-events-none opacity-60" : ""
+                      isSalaryProcessed ? "pointer-events-none opacity-60" : ""
                     }
                   >
                     <FormItems control={form.control} name="parallel" label="">
@@ -1521,7 +1539,7 @@ export default function AddEventModal({
                             <FormLabel>Артист</FormLabel>
                             <div
                               className={
-                                isSalaryClosed
+                                isSalaryProcessed
                                   ? "pointer-events-none opacity-60"
                                   : ""
                               }
@@ -1573,7 +1591,7 @@ export default function AddEventModal({
                             <FormLabel>Төлбөр</FormLabel>
                             <TextField
                               type={INPUT_TYPE.MONEY}
-                              disabled={isSalaryClosed}
+                              disabled={isSalaryProcessed}
                               props={{
                                 onChange: (v: string) => {
                                   const value = parseInt(v);

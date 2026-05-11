@@ -5,12 +5,12 @@ export enum METHOD {
   patch = "PATCH",
   delete = "DELETE",
 }
-// const BASE = "http://localhost:5050/api/v1/";
-const BASE = process.env.API
-  ? process.env.API?.endsWith("/")
-    ? process.env.API
-    : process.env.API + "/" :
-    "https://api.zunailbar.mn/api/v1/";
+const BASE = "http://localhost:5050/api/v1/";
+// const BASE = process.env.API
+//   ? process.env.API?.endsWith("/")
+//     ? process.env.API
+//     : process.env.API + "/" :
+//     "https://api.zunailbar.mn/api/v1/";
 
 export enum Api {
   login = "login",
