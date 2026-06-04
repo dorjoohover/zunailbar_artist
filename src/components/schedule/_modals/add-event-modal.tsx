@@ -101,6 +101,7 @@ const normalizePriceValue = (value?: unknown) => {
 const calculateVoucherDiscount = (
   subtotal: number,
   voucher?: Pick<Voucher, "type" | "value"> | null,
+  details?: Array<{ price?: unknown }>,
 ) => {
   if (!voucher) return 0;
 
@@ -110,7 +111,14 @@ const calculateVoucherDiscount = (
   if (total <= 0 || value <= 0) return 0;
 
   if (Number(voucher.type) === VOUCHER.Percent) {
-    return Math.min(total, Math.round((total * value) / 100));
+    // Хувийн хөнгөлөлт нь зөвхөн НЭГ үйлчилгээн дээр л үйлчилнэ.
+    const prices = Array.isArray(details)
+      ? details
+          .map((d) => Number((d as any)?.price ?? 0))
+          .filter((p) => Number.isFinite(p) && p > 0)
+      : [];
+    const base = prices.length > 0 ? Math.max(...prices) : total;
+    return Math.min(base, Math.round((base * value) / 100));
   }
 
   return Math.min(total, value);
@@ -268,7 +276,7 @@ export default function AddEventModal({
     service: ListType<Service>;
   };
   loading?: boolean;
-  send: (order: IOrder) => void;
+  send: (order: IOrder) => void | boolean | Promise<void | boolean>;
   values?: IOrder | any;
   // CustomAddEventModal?: React.FC<{ register: any; errors: any }>;
 }) {
@@ -475,11 +483,18 @@ export default function AddEventModal({
     [Api.service]: false,
   });
 
-  const onSubmit: SubmitHandler<EventFormData> = (formData) => {
+  const onSubmit: SubmitHandler<EventFormData> = async (formData) => {
     const normalizedDetails = (formData.details ?? []).map((detail) => ({
       ...detail,
       price: normalizePriceValue(detail?.price),
     }));
+    // Артист сонгогдоогүй detail байвал backend FK алдаатай унадаг тул эндээс
+    // эрт зогсооно.
+    const missingArtist = normalizedDetails.some((d: any) => !d?.user_id);
+    if (missingArtist) {
+      showToast("info", "Артист сонгоно уу.");
+      return;
+    }
     const detailSubtotal = sumPrices(normalizedDetails);
     const normalizedDiscount = Math.min(
       normalizePriceValue(formData.discount ?? 0),
@@ -526,9 +541,11 @@ export default function AddEventModal({
       edit: formData.edit ?? undefined,
       parallel: formData.parallel,
     } as IOrder;
-    send(newEvent);
-
-    setClose();
+    const result = await send(newEvent);
+    // Алдаа гарвал modal-ыг хааж, оруулсан мэдээллийг алдахгүй.
+    if (result !== false) {
+      setClose();
+    }
   };
 
   const onInvalid = async <T,>(e: T) => {
@@ -767,7 +784,7 @@ export default function AddEventModal({
     );
     setFormValueIfChanged(
       "discount",
-      calculateVoucherDiscount(detailSubtotal, selectedVoucher),
+      calculateVoucherDiscount(detailSubtotal, selectedVoucher, details),
     );
     setFormValueIfChanged("discount_type", selectedVoucher.type);
   }, [availableVouchers, details, form, voucher_id, voucherLoading]);
@@ -889,7 +906,7 @@ export default function AddEventModal({
       (item) => item.id === voucher_id,
     );
     const effectiveDiscount = selectedVoucher
-      ? calculateVoucherDiscount(serviceTotal, selectedVoucher)
+      ? calculateVoucherDiscount(serviceTotal, selectedVoucher, details)
       : normalizePriceValue(discount);
     const discountedDetails = normalizeOrderDetailPrices(
       details as DetailType[],
@@ -1136,7 +1153,11 @@ export default function AddEventModal({
                 {availableVouchers.map((voucher) => {
                   const selected = voucher.id === voucher_id;
                   const subtotal = sumPrices(details);
-                  const discount = calculateVoucherDiscount(subtotal, voucher);
+                  const discount = calculateVoucherDiscount(
+                    subtotal,
+                    voucher,
+                    details,
+                  );
                   const valueLabel =
                     Number(voucher.type) === VOUCHER.Percent
                       ? `${voucher.value ?? 0}%`
@@ -1349,23 +1370,49 @@ export default function AddEventModal({
         : "hover:bg-muted border-border"
     }`}
                         onClick={() => {
-                          if (
-                            (selected == undefined || selected == -1) &&
-                            details?.length == 2
-                          ) {
+                          // Сонгогдсон үйлчилгээг дарвал хасна.
+                          if (selected !== undefined && selected !== -1) {
+                            updateDetail(selected, undefined);
+                            return;
+                          }
+
+                          const sameCategoryIndex =
+                            details?.findIndex(
+                              (s) => s.category_id === service.category_id,
+                            ) ?? -1;
+
+                          // Ижил ангилалын үйлчилгээ байгаа бол одоо байгааг
+                          // солих (id, артистыг хадгална).
+                          if (sameCategoryIndex !== -1) {
+                            const currentDetails =
+                              form.getValues("details") || [];
+                            const updated = currentDetails.map((item, i) =>
+                              i === sameCategoryIndex
+                                ? {
+                                    ...item,
+                                    service_id: service.id,
+                                    service_name: service.name,
+                                    duration: service.duration,
+                                    category_id: service.category_id,
+                                    min_price: Number(service.min_price ?? 0),
+                                    max_price: Number(
+                                      service.max_price ??
+                                        service.min_price ??
+                                        0,
+                                    ),
+                                    price: undefined,
+                                    original_price: undefined,
+                                  }
+                                : item,
+                            );
+                            form.setValue("details", updated as any);
+                            return;
+                          }
+
+                          if (details?.length === 2) {
                             showToast(
                               "info",
                               "2-с олон үйлчилгээ сонгох боломжгүй",
-                            );
-                            return;
-                          }
-                          const categorySelected = details?.some(
-                            (s) => s.category_id === service.category_id,
-                          );
-                          if (categorySelected && selected == -1) {
-                            showToast(
-                              "info",
-                              "Өөр ангилалын үйлчилгээ сонгоно уу",
                             );
                             return;
                           }

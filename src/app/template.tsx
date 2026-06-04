@@ -1,5 +1,7 @@
 "use client";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 import { ROLE } from "@/lib/enum";
 import { API } from "@/utils/api";
 import { usePathname, useRouter } from "next/navigation";
@@ -58,9 +60,33 @@ export default function Template({
     }
   }, [pathname, router]);
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout");
+    } catch (error) {
+      console.error(error);
+    } finally {
+      router.push("/login");
+    }
+  };
+
   return (
     <div className="w-full max-w-screen">
-      {pathname != "/login" && <SidebarTrigger />}
+      {pathname != "/login" && (
+        <div className="flex items-center justify-between gap-2 px-2 py-2">
+          <SidebarTrigger />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 gap-2 text-rose-600 border-rose-300 hover:bg-rose-50"
+            onClick={handleLogout}
+          >
+            <LogOut className="size-4" />
+            Гарах
+          </Button>
+        </div>
+      )}
 
       {children}
     </div>

@@ -197,7 +197,7 @@ export default function DailyView({
   CustomEventComponent?: React.FC<IOrder>;
   events: Order[];
   loading: boolean;
-  send: (order: IOrder) => void;
+  send: (order: IOrder) => void | boolean | Promise<void | boolean>;
   values: {
     branch: SearchType<Branch>[];
     customer: SearchType<User>[];

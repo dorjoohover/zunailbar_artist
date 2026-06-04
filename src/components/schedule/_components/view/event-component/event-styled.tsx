@@ -156,7 +156,7 @@ export default function EventStyled({
     service: ListType<Service>;
   };
   index?: number;
-  send: (order: IOrder) => void;
+  send: (order: IOrder) => void | boolean | Promise<void | boolean>;
   event: EventStyledProps;
   CustomEventModal?: CustomEventModal;
   onDelete: (id: string) => void;

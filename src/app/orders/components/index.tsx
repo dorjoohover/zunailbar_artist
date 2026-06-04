@@ -277,6 +277,7 @@ export const OrderPage = ({
       showToast("info", res.error ?? "Алдаа гарлаа!", { duration: 5000 });
     }
     setAction(ACTION.DEFAULT);
+    return res.success;
   };
 
   const downloadExcel = async (pg: PG = DEFAULT_PG) => {
