@@ -333,8 +333,7 @@ export function AppSidebar() {
   };
   const { value, setValue } = useSidebarStore();
   // const [openIndex, setOpenIndex] = useState(null)
-  if (pathname == "/login") return;
-  return
+  if (pathname == "/login") return null;
   return (
     <Sidebar
       variant="inset"
