@@ -1,25 +1,43 @@
 "use client";
-import { OrderLog, User } from "@/models";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { Branch, IOrder, Order, OrderLog, Service, User } from "@/models";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ListType,
   ACTION,
   PG,
   DEFAULT_PG,
+  ListDefault,
   SearchType,
   Option,
   getEnumValues,
   StatusValues,
   OrderStatusValues,
-  textValue,
 } from "@/lib/constants";
+import z from "zod";
 import { Api } from "@/utils/api";
-import { search } from "@/app/(api)";
+import { create, deleteOne, excel, find, search, updateOne } from "@/app/(api)";
 import { fetcher } from "@/hooks/fetcher";
+import SchedulerViewFilteration from "@/components/schedule/_components/view/schedular-view-filteration";
+import { SchedulerProvider } from "@/providers/schedular-provider";
 import DynamicHeader from "@/components/dynamicHeader";
-import { mobileFormatter, parseDate } from "@/lib/functions";
+import {
+  formatDate,
+  mnDate,
+  mobileFormatter,
+  parseDate,
+  searchUsernameFormatter,
+  textValue,
+  toTimeString,
+  usernameFormatter,
+} from "@/lib/functions";
+import { showToast } from "@/shared/components/showToast";
 import { OrderStatus, STATUS } from "@/lib/enum";
 import { getColumns } from "./columns";
+import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
+import { AppAlertDialog } from "@/components/AlertDialog";
+import { DateRange } from "react-day-picker";
+import { Slot } from "@/models/slot.model";
 import { DataTable } from "@/components/data-table";
 import { ComboBox } from "@/shared/components/combobox";
 import { DatePicker } from "@/shared/components/date.picker";
@@ -41,30 +59,38 @@ export const OrderLogPage = ({
   logs: ListType<OrderLog>;
   users: SearchType<User>[];
 }) => {
+  const [items, setItems] = useState({
+    [Api.user]: users,
+  });
+  const userMap = useMemo(
+    () => new Map(items[Api.user].map((b) => [b.id, b.value])),
+    [items],
+  );
   const orderLogsFormatter = (data: ListType<OrderLog>) => {
-    const items: OrderLog[] = data.items.map((item) => ({
-      ...item,
-      changed_user_name: item.changed_user_name ?? "",
-      changed_user_mobile: item.changed_user_mobile ?? "",
-      branch_name: item.branch_name ?? "",
-      artist_names: item.artist_names ?? "",
-      customer_mobile: item.customer_mobile ?? "",
-      customer_name: item.customer_name ?? "",
-    }));
+    const items: OrderLog[] = data.items.map((item) => {
+      return {
+        ...item,
+        changed_user_name: item.changed_user_name ?? "",
+        changed_user_mobile: item.changed_user_mobile ?? "",
+        branch_name: item.branch_name ?? "",
+        artist_names: item.artist_names ?? "",
+        customer_mobile: item.customer_mobile ?? "",
+        customer_name: item.customer_name ?? "",
+      };
+    });
     return { items, count: data.count };
   };
-
-  const [userItems, setUserItems] = useState<SearchType<User>[]>(users);
   const [action, setAction] = useState(ACTION.DEFAULT);
   const [orderLogs, setOrderLogs] = useState<ListType<OrderLog>>(
     orderLogsFormatter(logs),
   );
   const [filter, setFilter] = useState<FilterType>({});
-
-  const changeFilter = (key: string, value: number | string | undefined | boolean) => {
+  const changeFilter = (
+    key: string,
+    value: number | string | undefined | boolean,
+  ) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
   };
-
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -81,18 +107,28 @@ export const OrderLogPage = ({
     filter?.new_order_status,
     filter?.customer_mobile,
   ]);
-
-  const searchField = async (v: string, key: Api) => {
+  const searchField = async (v: string, key: Api, edit?: boolean) => {
     if (v.length <= 1) return;
-    await search(key as any, { id: v, limit: 20, page: 0 }).then((d) => {
-      setUserItems(d.data);
+
+    const payload = {
+      id: v,
+    };
+    await search(key as any, {
+      ...payload,
+      limit: 20,
+      page: 0,
+    }).then((d) => {
+      setItems((prev) => ({
+        ...prev,
+        [key]: d.data,
+      }));
     });
   };
-
   const refresh = async (pg: PG = DEFAULT_PG) => {
     setAction(ACTION.RUNNING);
     const { page, limit, sort } = pg;
-    const date = filter.date ? parseDate(filter.date) : undefined;
+
+    const date = filter.date ? parseDate(filter?.date) : undefined;
 
     await fetcher<OrderLog>(
       Api.order,
@@ -110,14 +146,13 @@ export const OrderLogPage = ({
       },
       "logs",
     ).then((d) => {
-      setOrderLogs(orderLogsFormatter(d));
+      const formattedOrderLogs = orderLogsFormatter(d);
+      setOrderLogs(formattedOrderLogs);
     });
     setAction(ACTION.DEFAULT);
   };
-
   const view = async (data: OrderLog) => {};
   const columns = getColumns(view);
-
   const groups: {
     key: keyof FilterType;
     label: string;
@@ -129,7 +164,7 @@ export const OrderLogPage = ({
       {
         key: "user",
         label: "Өөрчлөлт оруулсан",
-        items: userItems.map((b) => ({
+        items: items[Api.user].map((b) => ({
           value: b.id,
           label: `${mobileFormatter(b.value?.split("__")?.[0])} ${b.value?.split("__")?.[1]?.trim() || "-"}`,
         })),
@@ -137,37 +172,52 @@ export const OrderLogPage = ({
       },
       {
         key: "date",
-        label: "Өөрчлөлт оруулсан огноо",
+        label: "Өөрлөлт оруулсан огноо",
         items: [],
         type: "date",
       },
       {
         key: "old_status",
         label: textValue("old_status"),
-        items: getEnumValues(STATUS).map((s) => ({ value: s, label: StatusValues[s] })),
+        items: getEnumValues(STATUS).map((s) => ({
+          value: s,
+          label: StatusValues[s],
+        })),
       },
       {
         key: "new_status",
         label: textValue("new_status"),
-        items: getEnumValues(STATUS).map((s) => ({ value: s, label: StatusValues[s] })),
+        items: getEnumValues(STATUS).map((s) => ({
+          value: s,
+          label: StatusValues[s],
+        })),
       },
       {
         key: "old_order_status",
         label: textValue("old_order_status"),
-        items: getEnumValues(OrderStatus).map((s) => ({ value: s, label: OrderStatusValues[s] })),
+        items: getEnumValues(OrderStatus).map((s) => ({
+          value: s,
+          label: OrderStatusValues[s],
+        })),
       },
       {
         key: "new_order_status",
         label: textValue("new_order_status"),
-        items: getEnumValues(OrderStatus).map((s) => ({ value: s, label: OrderStatusValues[s] })),
+        items: getEnumValues(OrderStatus).map((s) => ({
+          value: s,
+          label: OrderStatusValues[s],
+        })),
       },
     ],
-    [userItems],
+    [items[Api.user]],
   );
-
+  const handleSearch = (e: string) => {
+    void searchField(e, Api.user);
+  };
   return (
     <div className="relative">
       <DynamicHeader count={orderLogs.count} />
+
       <div className="admin-container relative">
         <div className="bg-white rounded-xl shadow-light border-light p-0 md:p-5">
           <DataTable
@@ -181,17 +231,17 @@ export const OrderLogPage = ({
                     className="max-w-50 w-full text-xs border rounded px-2 py-1.5"
                     placeholder="Утасны дугаар"
                     value={filter?.customer_mobile ?? ""}
-                    onChange={(e) =>
-                      changeFilter("customer_mobile", e.target.value || undefined)
-                    }
+                    onChange={(e) => changeFilter("customer_mobile", e.target.value || undefined)}
                   />
                 </label>
                 {groups.map((item, i) => {
                   const { key, type } = item;
-                  if (type === "date") {
+                  if (type == "date") {
                     return (
                       <label key={i}>
-                        <span className="filter-label">{item.label}</span>
+                        <span className="filter-label">
+                          {item.label as string}
+                        </span>
                         <DatePicker
                           value={filter?.date}
                           mode="single"
@@ -204,17 +254,19 @@ export const OrderLogPage = ({
                   }
                   return (
                     <label key={i}>
-                      <span className="filter-label">{item.label}</span>
+                      <span className="filter-label">
+                        {item.label as string}
+                      </span>
                       <ComboBox
                         pl={item.label}
                         name={item.label}
                         className="max-w-50 w-full text-xs!"
-                        value={filter?.[key] ? String(filter[key]) : ""}
+                        value={filter?.[key] ? String(filter[key]) : ""} //
                         items={item.items.map((it) => ({
                           value: String(it.value),
                           label: it.label as string,
                         }))}
-                        search={item.search ? (v) => searchField(v, Api.user) : undefined}
+                        search={item.search ? handleSearch : undefined}
                         props={{
                           value: filter?.[key] ? String(filter[key]) : "",
                           onChange: (val: string) => changeFilter(key, val),
@@ -233,8 +285,10 @@ export const OrderLogPage = ({
             count={orderLogs?.count}
             data={orderLogs?.items ?? []}
             refresh={refresh}
-            loading={action === ACTION.RUNNING}
+            loading={action == ACTION.RUNNING}
           />
+
+          {/* <Button>Баталгаажуулах</Button> */}
         </div>
       </div>
     </div>
