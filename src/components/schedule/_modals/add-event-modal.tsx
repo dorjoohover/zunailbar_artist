@@ -456,6 +456,8 @@ export default function AddEventModal({
   const isSalaryProcessed = Boolean(
     values?.id && hasSalaryProcessDate(values?.salary_date),
   );
+  // Task #8: Хаагдсан захиалгыг артист өөрчлөх боломжгүй.
+  const isFinishedOrder = values?.order_status === OrderStatus.Finished;
   const hasId = values?.id !== undefined;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -996,6 +998,11 @@ export default function AddEventModal({
           артист, төлбөрийн мэдээлэл өөрчлөх боломжгүй.
         </div>
       )}
+      {isFinishedOrder && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          Хаагдсан захиалгыг артист талаас өөрчлөх боломжгүй.
+        </div>
+      )}
       <FormProvider {...form}>
         <div className="double-col">
           <div className="flex gap-4 items-start col-span-2">
@@ -1104,7 +1111,7 @@ export default function AddEventModal({
             }}
           </FormItems>
         </div>
-        <div className="border-t ">
+        {/* <div className="border-t ">
           <p className="my-4">Төлбөр</p>
           <div className="mb-4 rounded-xl border bg-slate-50 p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -1238,7 +1245,7 @@ export default function AddEventModal({
                 return (
                   <TextField
                     type={INPUT_TYPE.MONEY}
-                    disabled={isSalaryProcessed}
+                    disabled={true}
                     props={{ ...field }}
                   />
                 );
@@ -1326,7 +1333,7 @@ export default function AddEventModal({
               }}
             </FormItems>
           </div>
-        </div>
+        </div> */}
 
         <div className="border p-2 rounded-md">
           <p className="my-2 font-bold">Үйлчилгээ</p>
@@ -1698,7 +1705,7 @@ export default function AddEventModal({
           <Button variant="outline" type="button" onClick={() => setClose()}>
             Буцах
           </Button>
-          <Button type="submit" loading={loading}>
+          <Button type="submit" loading={loading} disabled={isFinishedOrder}>
             Хадгалах
           </Button>
         </div>

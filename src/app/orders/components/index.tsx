@@ -159,7 +159,7 @@ export const OrderPage = ({
     });
     const map = new Map<string, SearchType<User>>();
 
-    data.items.forEach((order) => {
+    (data?.items ?? []).forEach((order) => {
       (order.details ?? []).forEach((detail: any) => {
         const id = detail.user_id ?? detail.artist_id;
         if (!id || map.has(id)) return;
@@ -192,9 +192,10 @@ export const OrderPage = ({
     getOrderArtists();
   }, [filter?.date, filter?.artist, filter?.branch, filter?.status]);
 
-  const orderFormatter = (data: ListType<Order>) => {
-    const items: Order[] = data.items.map((item) => ({ ...item }));
-    setOrders({ items, count: data.count });
+  const orderFormatter = (data: ListType<Order> | undefined) => {
+    if (!data) return;
+    const items: Order[] = (data.items ?? []).map((item) => ({ ...item }));
+    setOrders({ items, count: data.count ?? 0 });
   };
 
   useEffect(() => {
