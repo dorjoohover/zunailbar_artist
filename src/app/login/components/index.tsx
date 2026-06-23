@@ -20,6 +20,7 @@ import { login } from "@/app/(api)/auth";
 import { PasswordField } from "@/shared/components/password.field";
 import { useState } from "react";
 import { showToast } from "@/shared/components/showToast";
+import { ROLE } from "@/lib/enum";
 
 const formSchema = z.object({
   mobile: z.string().min(2, {
@@ -63,6 +64,8 @@ export function LoginForm() {
     const { data, error } = await login(value);
     if (error) {
       showToast("info", error);
+    } else if (data?.user?.role !== ROLE.MANAGER) {
+      showToast("info", "Эрх хүрэлцэхгүй байна");
     } else {
       showToast("success", "Амжилттай нэвтэрлээ");
       save(data.accessToken, data.branch_id, data.merchant_id);

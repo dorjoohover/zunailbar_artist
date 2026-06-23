@@ -101,7 +101,12 @@ const PaymentMethodSummary = ({ event }: { event: EventStyledProps }) => {
   const methodLabel = getPaymentMethodLabel(event.method);
   const prePaymentLabel = transactionLabel ?? preMethodLabel;
 
-  if (!prePaymentLabel && !methodLabel) return null;
+  const cardAmount = Number(event.card_amount ?? 0);
+  const bankAmount = Number(event.bank_amount ?? 0);
+  const cashAmount = Number(event.cash_amount ?? 0);
+  const hasBreakdown = cardAmount > 0 || bankAmount > 0 || cashAmount > 0;
+
+  if (!prePaymentLabel && !methodLabel && !hasBreakdown) return null;
 
   return (
     <div className="mb-1 text-xs">
@@ -113,6 +118,25 @@ const PaymentMethodSummary = ({ event }: { event: EventStyledProps }) => {
       {methodLabel && (
         <div>
           <b>Төлбөрийн хэлбэр: {methodLabel}</b>
+        </div>
+      )}
+      {hasBreakdown && (
+        <div className="mt-1 flex flex-wrap gap-2">
+          {cardAmount > 0 && (
+            <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
+              Карт: {money(String(cardAmount))}₮
+            </span>
+          )}
+          {bankAmount > 0 && (
+            <span className="rounded bg-purple-50 px-2 py-0.5 text-purple-700">
+              Данс: {money(String(bankAmount))}₮
+            </span>
+          )}
+          {cashAmount > 0 && (
+            <span className="rounded bg-green-50 px-2 py-0.5 text-green-700">
+              Бэлэн: {money(String(cashAmount))}₮
+            </span>
+          )}
         </div>
       )}
     </div>
