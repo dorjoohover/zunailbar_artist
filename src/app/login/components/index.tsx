@@ -64,7 +64,7 @@ export function LoginForm() {
     const { data, error } = await login(value);
     if (error) {
       showToast("info", error);
-    } else if (data?.user?.role !== ROLE.MANAGER) {
+    } else if (data?.role != ROLE.MANAGER) {
       showToast("info", "Эрх хүрэлцэхгүй байна");
     } else {
       showToast("success", "Амжилттай нэвтэрлээ");

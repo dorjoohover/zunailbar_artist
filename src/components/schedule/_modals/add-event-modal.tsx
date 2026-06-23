@@ -61,6 +61,9 @@ const defaultValues = {
   total_amount: 0,
   pre_amount: 0,
   paid_amount: 0,
+  card_amount: 0,
+  bank_amount: 0,
+  cash_amount: 0,
   method: undefined,
   pre_method: undefined,
   voucher_id: null,
@@ -497,25 +500,13 @@ export default function AddEventModal({
       showToast("info", "Артист сонгоно уу.");
       return;
     }
-    const detailSubtotal = sumPrices(normalizedDetails);
-    const normalizedDiscount = Math.min(
-      normalizePriceValue(formData.discount ?? 0),
-      detailSubtotal,
-    );
-    const rawPreAmount = normalizePriceValue(formData.pre_amount ?? 0);
-    const normalizedTotalAmount = Math.max(
-      detailSubtotal - normalizedDiscount,
-      rawPreAmount,
-      0,
-    );
-    const normalizedPreAmount = Math.min(
-      rawPreAmount,
-      normalizedTotalAmount,
-    );
-    const normalizedPaidAmount = Math.max(
-      normalizedTotalAmount - normalizedPreAmount,
-      0,
-    );
+    const normalizedPreAmount = normalizePriceValue(formData.pre_amount ?? 0);
+    const cardAmount = normalizePriceValue(formData.card_amount ?? 0);
+    const bankAmount = normalizePriceValue(formData.bank_amount ?? 0);
+    const cashAmount = normalizePriceValue(formData.cash_amount ?? 0);
+    const normalizedPaidAmount = cardAmount + bankAmount + cashAmount;
+    const normalizedTotalAmount = normalizedPreAmount + normalizedPaidAmount;
+    const normalizedDiscount = 0;
     const newEvent = {
       branch_id: formData.branch_id,
       details: normalizedDetails,
@@ -529,6 +520,9 @@ export default function AddEventModal({
       total_amount: normalizedTotalAmount,
       paid_amount: normalizedPaidAmount,
       pre_amount: normalizedPreAmount,
+      card_amount: cardAmount || undefined,
+      bank_amount: bankAmount || undefined,
+      cash_amount: cashAmount || undefined,
       voucher_id: formData.voucher_id ?? null,
       voucher_name: formData.voucher_name ?? undefined,
       voucher_value: Number(formData.voucher_value ?? 0) || undefined,
@@ -621,6 +615,9 @@ export default function AddEventModal({
     paid_amount = 0,
     total_amount = 0,
     pre_amount = 0,
+    card_amount = 0,
+    bank_amount = 0,
+    cash_amount = 0,
     order_date,
     start_time,
     duration,
@@ -872,92 +869,22 @@ export default function AddEventModal({
   }, [isTimeSlotsEnabled]);
 
   useEffect(() => {
-    if (!details.length) {
-      const preservedTotal = Math.max(
-        isEdit ? normalizePriceValue(total_amount) : 0,
-        normalizePriceValue(pre_amount),
-      );
-
-      setFormValueIfChanged("total_amount", preservedTotal, {
-        shouldDirty: true,
-        shouldTouch: false,
-      });
-
-      const normalizedPreAmount = Math.min(
-        normalizePriceValue(pre_amount),
-        preservedTotal,
-      );
-      const nextPaidAmount = Math.max(preservedTotal - normalizedPreAmount, 0);
-
-      if (isEdit) {
-        setFormValueIfChanged("pre_amount", normalizedPreAmount, {
-          shouldDirty: true,
-          shouldTouch: false,
-        });
-      }
-      setFormValueIfChanged("paid_amount", nextPaidAmount, {
-        shouldDirty: true,
-        shouldTouch: false,
-      });
-
-      return;
-    }
-
-    const serviceTotal = sumPrices(details);
-    const selectedVoucher = availableVouchers.find(
-      (item) => item.id === voucher_id,
-    );
-    const effectiveDiscount = selectedVoucher
-      ? calculateVoucherDiscount(serviceTotal, selectedVoucher, details)
-      : normalizePriceValue(discount);
-    const discountedDetails = normalizeOrderDetailPrices(
-      details as DetailType[],
-      Math.max(serviceTotal - effectiveDiscount, 0),
-      effectiveDiscount,
-    );
-    const calculatedTotal = sumPrices(discountedDetails);
-    const nextTotalAmount = Math.max(
-      calculatedTotal,
-      normalizePriceValue(pre_amount),
-    );
-    if (nextTotalAmount <= 0) {
-      setFormValueIfChanged("total_amount", 0, {
-        shouldDirty: true,
-        shouldTouch: false,
-      });
-      setFormValueIfChanged("paid_amount", 0, {
-        shouldDirty: true,
-        shouldTouch: false,
-      });
-      return;
-    }
-    const normalizedPreAmount = Math.min(
-      normalizePriceValue(pre_amount),
-      nextTotalAmount,
-    );
-    const nextPaidAmount = Math.max(nextTotalAmount - normalizedPreAmount, 0);
-    setFormValueIfChanged("total_amount", nextTotalAmount, {
+    const pre = normalizePriceValue(pre_amount);
+    const card = normalizePriceValue(card_amount);
+    const bank = normalizePriceValue(bank_amount);
+    const cash = normalizePriceValue(cash_amount);
+    const nextTotal = pre + card + bank + cash;
+    const nextPaid = card + bank + cash;
+    setFormValueIfChanged("total_amount", nextTotal, {
       shouldDirty: true,
       shouldTouch: false,
     });
-    setFormValueIfChanged("pre_amount", normalizedPreAmount, {
+    setFormValueIfChanged("paid_amount", nextPaid, {
       shouldDirty: true,
       shouldTouch: false,
     });
-    setFormValueIfChanged("paid_amount", nextPaidAmount, {
-      shouldDirty: true,
-      shouldTouch: false,
-    });
-  }, [
-    availableVouchers,
-    details,
-    discount,
-    paid_amount,
-    pre_amount,
-    total_amount,
-    voucher_id,
-    isEdit,
-  ]);
+  }, [pre_amount, card_amount, bank_amount, cash_amount]);
+
   useEffect(() => {
     if (!start_time || !duration) return;
 
@@ -1284,35 +1211,39 @@ export default function AddEventModal({
                 );
               }}
             </FormItems>
-          </div>
-          {isEdit && (
-            <div className="mt-3">
-              <p className="text-sm mb-2 text-muted-foreground">Үлдэгдэл төлбөр (хэлбэрээр)</p>
-              <div className="grid grid-cols-3 gap-3">
-                {(
-                  [
-                    { label: "Карт", value: values?.card_amount },
-                    { label: "Данс", value: values?.bank_amount },
-                    { label: "Бэлэн", value: values?.cash_amount },
-                  ] as const
-                ).map(({ label, value }) => (
-                  <div key={label}>
-                    <p className="text-xs text-muted-foreground mb-1">{label}</p>
-                    <div className="relative w-full">
-                      <input
-                        type="text"
-                        readOnly
-                        disabled
-                        value={money(String(value ?? 0))}
-                        className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 pr-8"
-                      />
-                      <span className="absolute top-1/2 -translate-y-1/2 right-3 text-primary pointer-events-none text-sm">₮</span>
-                    </div>
-                  </div>
-                ))}
+            <div className="col-span-2">
+              <p className="text-sm font-medium mb-1">Үлдэгдэл төлбөр (хэлбэрээр)</p>
+              <div className="grid grid-cols-3 gap-2">
+                <FormItems control={form.control} name="card_amount" label="Карт">
+                  {(field) => (
+                    <TextField
+                      type={INPUT_TYPE.MONEY}
+                      disabled={isSalaryProcessed}
+                      props={{ ...field }}
+                    />
+                  )}
+                </FormItems>
+                <FormItems control={form.control} name="bank_amount" label="Данс">
+                  {(field) => (
+                    <TextField
+                      type={INPUT_TYPE.MONEY}
+                      disabled={isSalaryProcessed}
+                      props={{ ...field }}
+                    />
+                  )}
+                </FormItems>
+                <FormItems control={form.control} name="cash_amount" label="Бэлэн">
+                  {(field) => (
+                    <TextField
+                      type={INPUT_TYPE.MONEY}
+                      disabled={isSalaryProcessed}
+                      props={{ ...field }}
+                    />
+                  )}
+                </FormItems>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="border p-2 rounded-md">

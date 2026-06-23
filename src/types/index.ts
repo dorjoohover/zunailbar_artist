@@ -182,6 +182,21 @@ export const eventSchema = z.object({
     label: "Гүйцээж төлсөн төлбөр",
     allowNullable: true,
   }),
+  card_amount: zNumOpt({
+    value: 0,
+    label: "Карт",
+    allowNullable: true,
+  }),
+  bank_amount: zNumOpt({
+    value: 0,
+    label: "Данс",
+    allowNullable: true,
+  }),
+  cash_amount: zNumOpt({
+    value: 0,
+    label: "Бэлэн",
+    allowNullable: true,
+  }),
   voucher_id: z.string().nullable().optional(),
   voucher_name: z.string().nullable().optional(),
   voucher_value: zNumOpt({
@@ -204,21 +219,12 @@ export const eventSchema = z.object({
   edit: z.string().nullable().optional(),
 }).superRefine((data, ctx) => {
   const preAmount = Number(data.pre_amount ?? 0);
-  const paidAmount = Number(data.paid_amount ?? 0);
 
   if (preAmount > 0 && !data.pre_method) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["pre_method"],
       message: "Урьдчилгааны төлбөрийн хэлбэр сонгоно уу",
-    });
-  }
-
-  if (paidAmount > 0 && !data.method) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["method"],
-      message: "Үлдэгдэл төлбөрийн хэлбэр сонгоно уу",
     });
   }
 });
