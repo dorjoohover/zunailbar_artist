@@ -1253,21 +1253,6 @@ export default function AddEventModal({
             </FormItems>
             <FormItems
               control={form.control}
-              name="paid_amount"
-              label="Гүйцээж төлсөн төлбөр"
-            >
-              {(field) => {
-                return (
-                  <TextField
-                    disabled={true}
-                    type={INPUT_TYPE.MONEY}
-                    props={{ ...field }}
-                  />
-                );
-              }}
-            </FormItems>
-            <FormItems
-              control={form.control}
               name="pre_method"
               label="Урьдчилгааны хэлбэр"
             >
@@ -1299,40 +1284,35 @@ export default function AddEventModal({
                 );
               }}
             </FormItems>
-            <FormItems
-              control={form.control}
-              name="method"
-              label="Үлдэгдэл төлбөрийн хэлбэр"
-            >
-              {(field) => {
-                field.value = field.value
-                  ? +field.value?.toString().slice(0, 2)
-                  : field.value;
-                return (
-                  <div
-                    className={
-                      isSalaryProcessed ? "pointer-events-none opacity-60" : ""
-                    }
-                  >
-                    <ComboBox
-                      props={{ ...field }}
-                      items={[
-                        PaymentMethod.QPAY,
-                        PaymentMethod.BANK,
-                        PaymentMethod.CARD,
-                        PaymentMethod.CASH,
-                      ].map((item) => {
-                        return {
-                          value: item.toString(),
-                          label: getMethodValue[item],
-                        };
-                      })}
-                    />
-                  </div>
-                );
-              }}
-            </FormItems>
           </div>
+          {isEdit && (
+            <div className="mt-3">
+              <p className="text-sm mb-2 text-muted-foreground">Үлдэгдэл төлбөр (хэлбэрээр)</p>
+              <div className="grid grid-cols-3 gap-3">
+                {(
+                  [
+                    { label: "Карт", value: values?.card_amount },
+                    { label: "Данс", value: values?.bank_amount },
+                    { label: "Бэлэн", value: values?.cash_amount },
+                  ] as const
+                ).map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                    <div className="relative w-full">
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={money(String(value ?? 0))}
+                        className="flex h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 pr-8"
+                      />
+                      <span className="absolute top-1/2 -translate-y-1/2 right-3 text-primary pointer-events-none text-sm">₮</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="border p-2 rounded-md">

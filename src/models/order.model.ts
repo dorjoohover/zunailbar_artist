@@ -59,6 +59,9 @@ export interface Order {
   is_pre_amount_paid: boolean;
   total_amount: number;
   paid_amount: number;
+  card_amount?: number;
+  bank_amount?: number;
+  cash_amount?: number;
   created_at?: Date;
   customer?: User;
   details?: IOrderDetail[];
