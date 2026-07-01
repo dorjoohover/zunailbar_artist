@@ -142,17 +142,20 @@ export const OrderPage = ({
   };
 
   const getOrderArtists = async () => {
+    // Жагсаалт горимд бүх артистыг харуулна — хүнд query илгээхгүй
+    if (filter?.list) {
+      setOrderArtists(users);
+      return;
+    }
+
+    // Өдрийн горимд зөвхөн 1 өдрийн захиалгаас артист жагсаалт гаргана
     const selectedStart = filter?.date?.from ?? mnDate(new Date());
-    const selectedEnd =
-      filter?.date?.to ?? filter?.date?.from ?? mnDate(new Date());
     const start = dateFormat(mnDate(selectedStart));
-    const end = dateFormat(mnDate(selectedEnd));
     const data = await fetcher<Order>(Api.order, {
       page: 0,
-      limit: 1000,
+      limit: 200,
       sort: DEFAULT_PG.sort,
       date: start,
-      end_date: filter?.list ? end : undefined,
       order_status: filter?.status,
       branch_id: filter?.branch,
       friend: filter?.status != OrderStatus.Friend ? undefined : 0,
