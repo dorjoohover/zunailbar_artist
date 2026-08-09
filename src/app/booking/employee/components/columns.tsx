@@ -44,7 +44,7 @@ export function getColumns(
     },
     {
       accessorKey: "finish_time",
-      header: "Тарах цаг",
+      header: "Дуусах цаг",
       cell: ({ row }) => {
         const time = row.getValue("finish_time") as string;
         return time ? formatTime(time) : "-";

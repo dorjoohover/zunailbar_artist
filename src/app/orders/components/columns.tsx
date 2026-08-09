@@ -112,6 +112,20 @@ export function getColumns(
       },
     },
     {
+      accessorKey: "channel",
+      header: () => <span>Суваг</span>,
+      cell: ({ row }) => {
+        const channel = row.getValue("channel") as string | undefined;
+        return channel === "chatbot" ? (
+          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+            Chatbot
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">-</span>
+        );
+      },
+    },
+    {
       id: "actions",
       header: "Үйлдэл",
       cell: ({ row }) => (

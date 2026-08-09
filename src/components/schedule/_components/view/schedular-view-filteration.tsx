@@ -271,7 +271,7 @@ export default function ({
     <div className="flex w-full flex-col">
       <div className="daily-weekly-monthly-selection relative w-full">
         <div className="mb-0 flex w-full flex-col gap-3">
-          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <label className="min-w-[150px]">
               <span className="filter-label">Огноо</span>
 
@@ -363,6 +363,20 @@ export default function ({
                 })}
               />
             </label>
+
+            <label className="w-full maw-[300px] min-w-[150px]">
+              <span className="filter-label">Суваг</span>
+              <ComboBox
+                props={{
+                  name: "Суваг",
+                  onBlur: () => {},
+                  onChange: (e) => setFilter("channel", e),
+                  ref: () => null,
+                  value: filter?.channel,
+                }}
+                items={[{ value: "chatbot", label: "Chatbot-оор үүссэн" }]}
+              />
+            </label>
           </div>
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
@@ -372,6 +386,7 @@ export default function ({
                   setFilter("artist", undefined);
                   setFilter("branch", undefined);
                   setFilter("status", undefined);
+                  setFilter("channel", undefined);
                   setFilter("date", {
                     from: resetDate,
                     to: resetDate,

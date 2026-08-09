@@ -41,6 +41,7 @@ export type FilterType = {
   branch?: string;
   list?: boolean;
   mobile?: string;
+  channel?: string;
 };
 
 export const OrderPage = ({
@@ -158,6 +159,7 @@ export const OrderPage = ({
       date: start,
       order_status: filter?.status,
       branch_id: filter?.branch,
+      channel: filter?.channel,
       friend: filter?.status != OrderStatus.Friend ? undefined : 0,
     });
     const map = new Map<string, SearchType<User>>();
@@ -193,7 +195,13 @@ export const OrderPage = ({
     refresh();
     getAristSchedules();
     getOrderArtists();
-  }, [filter?.date, filter?.artist, filter?.branch, filter?.status]);
+  }, [
+    filter?.date,
+    filter?.artist,
+    filter?.branch,
+    filter?.status,
+    filter?.channel,
+  ]);
 
   const orderFormatter = (data: ListType<Order> | undefined) => {
     if (!data) return;
@@ -251,6 +259,7 @@ export const OrderPage = ({
       order_status: filter?.status,
       user_id: filter?.artist,
       branch_id: filter?.branch,
+      channel: filter?.channel,
       friend: filter?.status != OrderStatus.Friend ? undefined : 0,
       ...(pg.filter && { customer: pg.filter }),
     }).then((d) => {
@@ -300,6 +309,7 @@ export const OrderPage = ({
       order_status: filter?.status,
       user_id: filter?.artist,
       branch_id: filter?.branch,
+      channel: filter?.channel,
       friend: filter?.status != OrderStatus.Friend ? undefined : 0,
     });
     if (res.success && res.data) {

@@ -634,9 +634,18 @@ export default function AddEventModal({
     form.setValue(name as any, value, options);
   };
   const isDurationInitialized = useRef(false);
+  const initializedEditOrderId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!values || !values?.id || !services.items.length) return;
+    // Энэ effect зөвхөн edit горимд НЭГ удаа л (тухайн захиалгыг анх
+    // онгойлгоход) form.reset хийх ёстой. Хэрэв "services.items"
+    // dependency-аар дахин ажиллуулбал (жишээ нь хэрэглэгч Салбар-ыг
+    // солиход services дахин татагдаж массивын reference өөрчлөгддөг тул)
+    // form бүхэлдээ анхны `values`-руу reset хийгдэж, дөнгөж сонгосон шинэ
+    // салбар (болон бусад өөрчлөлт) буцаж хуучин утгандаа очдог байсан.
+    if (initializedEditOrderId.current === values.id) return;
+    initializedEditOrderId.current = values.id;
 
     const basePrices = resolveEditBasePrices({
       details: values?.details ?? [],

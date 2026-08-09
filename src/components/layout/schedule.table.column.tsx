@@ -51,7 +51,7 @@ export function DayScheduleColumn({
   };
 
   const FINISH_GAP = 0.5;
-  // Тарах цаг сүүлийн авах цагаас бага, мөн эрт өглөө (шөнө дунд давсан,
+  // Дуусах цаг сүүлийн авах цагаас бага, мөн эрт өглөө (шөнө дунд давсан,
   // жишээ 00:30) орсон бол хүчинтэй гэж үзнэ (backend-тэй ижил дүрэм).
   const isValidFinishTime = (nextFinishTime: string, lastStart: number) => {
     let finish = timeToDecimal(nextFinishTime);
@@ -134,7 +134,7 @@ export function DayScheduleColumn({
           <div className="space-y-3">
             <div className="rounded-lg border border-slate-200 bg-white p-3">
               <label className="mb-2 block text-[11px] text-slate-500">
-                Тарах цаг
+                Дуусах цаг
               </label>
               {allowFinishTimeEdit ? (
                 <input
@@ -160,7 +160,7 @@ export function DayScheduleColumn({
               <p className="mt-2 text-[11px] leading-4 text-slate-500">
                 {allowFinishTimeEdit
                   ? `Энэ цаг нь үйлчилгээ хамгийн оройдоо хэдэн цагт дуусахыг заана. Хамгийн багадаа ${minimumFinishTime || "--"} байна.`
-                  : "Тарах цагийг зөвхөн admin талаас онооно."}
+                  : "Дуусах цагийг зөвхөн admin талаас онооно."}
               </p>
             </div>
 
@@ -227,7 +227,7 @@ export function DayScheduleColumn({
                   {decimalToTime(Math.max(...times.map(timeToDecimal)))}
                 </div>
                 <div>
-                  Тарах цаг:{" "}
+                  Дуусах цаг:{" "}
                   {finishTime ?? (allowFinishTimeEdit ? "-" : "Admin оноогоогүй")}
                 </div>
               </div>
@@ -268,7 +268,7 @@ export function DayScheduleColumn({
             {times.length > 0 && (
               <AppAlertDialog
                 title="Энэ өдрийн хуваарийг цэвэрлэх үү?"
-                description="Сонгосон цагууд болон тарах цаг хоёулаа устна."
+                description="Сонгосон цагууд болон дуусах цаг хоёулаа устна."
                 confirmText="Цэвэрлэх"
                 trigger={
                   <button className="w-full flex items-center text-sm justify-center gap-2 px-3 py-2 bg-white hover:bg-red-50 text-red-600 border border-slate-200 hover:border-red-200 rounded-lg text-xs transition-colors">
