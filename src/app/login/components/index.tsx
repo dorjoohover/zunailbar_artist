@@ -46,18 +46,31 @@ export function LoginForm() {
     },
   });
   const save = async (token: string, branch: string, merchant: string) => {
-    await fetch("/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        token,
-        branch,
-        merchant,
-      }),
-    });
-    window.location.replace("/orders");
+    try {
+      await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+          branch,
+          merchant,
+        }),
+      });
+    } catch (error) {
+      // /api/login хүсэлт (сүлжээ, redirect follow гэх мэт шалтгаанаар)
+      // амжилтгүй болсон ч доорх navigation барагтаа явагдаж, хэрэглэгч
+      // /login дээрээ "гацахгүй" — cookie аль хэдийн тавигдсан бол middleware
+      // "/" рүү зөв оруулна, тавигдаагүй бол дахин /login рүү буцаана.
+      console.error("⛔ /api/login failed:", error);
+    }
+    // Cookie тавигдсаны дараа шууд "/" рүү бодит navigation хийнэ (жагсаалт
+    // дахин ачаалагдаж middleware шинэ cookie-г таньж эхэлнэ) — "/orders"
+    // руу шууд `replace` хийж middleware-ийн redirect-д найдахад заримдаа
+    // гараар refresh хийх шаардлагатай болдог байсан тул "/" руу явж, root
+    // page.tsx-ийн server-side "/orders" redirect-д даатгана.
+    window.location.href = "/";
   };
   const onSubmit = async (value: ILoginUser) => {
     setLoading(true);
