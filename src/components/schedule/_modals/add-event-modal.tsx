@@ -13,7 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { EventFormData, eventSchema } from "@/types/index";
 import { useScheduler } from "@/providers/schedular-provider";
 import { Branch, IOrder, Service, User, Voucher } from "@/models";
-import { INPUT_TYPE, OrderStatus, PaymentMethod, ROLE, UserStatus, VOUCHER } from "@/lib/enum";
+import { INPUT_TYPE, OrderStatus, PaymentMethod, ROLE, STATUS, UserStatus, VOUCHER } from "@/lib/enum";
 import { FormItems } from "@/shared/components/form.field";
 import { ComboBox } from "@/shared/components/combobox";
 import {
@@ -343,9 +343,12 @@ export default function AddEventModal({
         role: key === Api.customer ? ROLE.CLIENT : ROLE.E_M,
         services: details.map((d) => d.service_id).join(","),
         branch_id: key === Api.customer ? undefined : branchId,
-        // Ажлаас гарсан/идэвхгүй ажилтан захиалга үүсгэх артистын жагсаалтад
-        // (хайлтаар ч) гарч ирэхгүй байх ёстой.
-        ...(key === Api.customer ? {} : { user_status: UserStatus.ACTIVE }),
+        // Ажлаас гарсан/идэвхгүй ЭСВЭЛ устгасан (users.status=Hidden)
+        // ажилтан захиалга үүсгэх артистын жагсаалтад (хайлтаар ч) гарч
+        // ирэхгүй байх ёстой.
+        ...(key === Api.customer
+          ? {}
+          : { user_status: UserStatus.ACTIVE, status: STATUS.Active }),
         ...(edit === undefined ? { id: value } : { value }),
       };
     }

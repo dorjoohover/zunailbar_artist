@@ -3,7 +3,7 @@ import { search } from "../(api)";
 import { Service } from "@/models/service.model";
 import { OrderPage } from "./components";
 import { Branch, User } from "@/models";
-import { ROLE, UserStatus } from "@/lib/enum";
+import { ROLE, STATUS, UserStatus } from "@/lib/enum";
 import { find } from "../(api)";
 
 export default async function Page() {
@@ -13,6 +13,9 @@ export default async function Page() {
       limit: 20,
       role: ROLE.E_M,
       user_status: UserStatus.ACTIVE,
+      // "Устгасан" (users.status=Hidden) ажилтан ч захиалга vvсгэх артистын
+      // жагсаалтад гарч ирэхгvй байх ёстой.
+      status: STATUS.Active,
     }),
     find<Service>(Api.service, { limit: 20, sort: false }),
   ]);
