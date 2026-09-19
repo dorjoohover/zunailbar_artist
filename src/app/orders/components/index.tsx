@@ -19,6 +19,11 @@ import { coerceDate, mnDate } from "@/lib/functions";
 import { showToast } from "@/shared/components/showToast";
 import { OrderStatus } from "@/lib/enum";
 import { getColumns } from "./columns";
+import {
+  buildOrderSearch,
+  parseOrderQuery,
+  type OrderQuery,
+} from "./filter-url";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { AppAlertDialog } from "@/components/AlertDialog";
@@ -48,6 +53,7 @@ export const OrderPage = ({
   customers,
   services,
   initialFilter,
+  initialQuery,
   titleOverride,
   showConfirmButton = true,
 }: {
@@ -56,15 +62,19 @@ export const OrderPage = ({
   users: SearchType<User>[];
   customers: SearchType<User>[];
   initialFilter?: FilterType;
+  initialQuery?: OrderQuery;
   titleOverride?: string;
   showConfirmButton?: boolean;
 }) => {
   const [action, setAction] = useState(ACTION.DEFAULT);
   const [orders, setOrders] = useState<ListType<Order>>(ListDefault);
-  const [filter, setFilter] = useState<FilterType>({
+  // Сонгосон өдөр URL-д (?date=YYYY-MM-DD) хадгалагддаг тул refresh / reload
+  // хийсний дараа ч тухайн өдөр дээрээ үлдэнэ. URL-д байхгүй бол өнөөдөр.
+  const [filter, setFilter] = useState<FilterType>(() => ({
     date: getTodayRange(),
+    ...parseOrderQuery(initialQuery),
     ...initialFilter,
-  });
+  }));
   const [artists, setArtists] = useState<SearchType<User>[]>(users);
   const [orderArtists, setOrderArtists] = useState<SearchType<User>[]>([]);
   const changeFilter = (
@@ -88,6 +98,36 @@ export const OrderPage = ({
     const day = String(value.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   };
+
+  // Сонгосон өдөр / жагсаалтын горимыг URL-д (?date=YYYY-MM-DD) тусгана.
+  // history.replaceState нь сервер рүү шинэ хүсэлт явуулахгүй, history-д шинэ
+  // мөр ч нэмэхгүй. Өнөөдөр (өгөгдмөл) үед query бичихгүй.
+  useEffect(() => {
+    const from = filter?.date?.from;
+    const to = filter?.date?.to;
+    const search = buildOrderSearch(
+      window.location.search,
+      {
+        date: from ? dateFormat(mnDate(from)) : undefined,
+        to: to ? dateFormat(mnDate(to)) : undefined,
+        list: filter?.list,
+      },
+      dateFormat(mnDate(new Date())),
+    );
+    if (search === window.location.search) return;
+
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${search}${window.location.hash}`,
+    );
+  }, [
+    filter?.date,
+    filter?.list,
+    initialQuery?.date,
+    initialQuery?.to,
+    initialQuery?.list,
+  ]);
 
   const getAristSchedules = async () => {
     const selectedDate = mnDate(filter?.date?.from ?? new Date());
@@ -224,14 +264,24 @@ export const OrderPage = ({
     setOrders({ items, count: data.count ?? 0 });
   };
 
+  // 5 минут тутамд жагсаалтыг автоматаар шинэчилнэ.
+  //
+  // ⚠️ Өмнө нь энд `setFilter({})` хийж БҮХ шүүлтүүрийг (сонгосон өдрийг ч)
+  // цэвэрлэдэг байсан тул өөр өдөр дээр захиалга нэмж байх үед 5 минут тутам
+  // өнөөдөр рүү үсэрдэг байв. Одоо шүүлтүүрийг хэвээр нь үлдээгээд зөвхөн
+  // өгөгдлийг дахин татна. `reloadRef` нь interval-ийн эхний render-ийн
+  // (хуучирсан) filter-ээр биш, үргэлж хамгийн сүүлийн filter-ээр ажиллахыг
+  // хангана.
+  const reloadRef = useRef<() => void>(() => {});
   useEffect(() => {
-    const interval = setInterval(
-      () => {
-        setFilter({});
-        getAristSchedules();
-      },
-      5 * 60 * 1000,
-    );
+    reloadRef.current = () => {
+      refresh();
+      getAristSchedules();
+      getOrderArtists();
+    };
+  });
+  useEffect(() => {
+    const interval = setInterval(() => reloadRef.current(), 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);

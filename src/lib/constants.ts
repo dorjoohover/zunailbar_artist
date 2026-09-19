@@ -208,6 +208,7 @@ export interface ScheduleData {
 }
 
 export interface SearchType<T> {
+  branch_id: string;
   id: string;
   user_id?: string;
   value: string;

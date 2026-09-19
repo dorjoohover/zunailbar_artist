@@ -18,6 +18,7 @@ export interface IUser {
   percent?: number;
   created_at?: Date;
   level?: number;
+  order_count?: number;
 }
 export interface User {
   id: string;
@@ -39,6 +40,7 @@ export interface User {
   profile_img?: string;
   description?: string;
   created_at?: Date;
+  order_count?: number;
 }
 
 export interface ILoginUser {

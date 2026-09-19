@@ -111,9 +111,7 @@ const getArtistScheduleBlocks = (value?: string) => {
   });
 
   return groups.map((group) =>
-    group.length === 1
-      ? group[0]
-      : `${group[0]} - ${group[group.length - 1]}`,
+    group.length === 1 ? group[0] : `${group[0]} - ${group[group.length - 1]}`,
   );
 };
 
@@ -252,10 +250,14 @@ export default function ({
   };
   const scheduledArtists = values.artists
     .map((user) => {
-      const [mobile, nickname, , color] = user.value?.split("__");
+      const [mobile, nickname, defaultBranchId, color] = user.value?.split("__");
       const scheduleBlocks = getArtistScheduleBlocks(
         typeof user.item === "string" ? user.item : undefined,
       );
+      const branchId = user.branch_id || defaultBranchId;
+      const branchName = branchId
+        ? values.branch.find((b) => b.id === branchId)?.value
+        : undefined;
 
       return {
         user,
@@ -263,6 +265,7 @@ export default function ({
         scheduleBlocks,
         formattedMobile: mobileFormatter(mobile ?? ""),
         displayName: firstLetterUpper(nickname ?? ""),
+        branchName,
       };
     })
     .filter((artist) => artist.scheduleBlocks.length > 0);
@@ -452,7 +455,9 @@ export default function ({
                               if (blockRe) {
                                 const raw = e.target?.value ?? "";
                                 const cleaned = raw.replace(blockRe, "");
-                                (field.onChange as (v: string) => void)(cleaned);
+                                (field.onChange as (v: string) => void)(
+                                  cleaned,
+                                );
                               } else {
                                 field.onChange(e);
                               }
@@ -473,7 +478,9 @@ export default function ({
                       className="col-span-2"
                     >
                       {(field) => {
-                        return <PasswordField props={{ ...field }} view={true} />;
+                        return (
+                          <PasswordField props={{ ...field }} view={true} />
+                        );
                       }}
                     </FormItems>
                   </div>
@@ -532,6 +539,7 @@ export default function ({
                       scheduleBlocks,
                       formattedMobile,
                       displayName,
+                      branchName,
                     }) => (
                       <div
                         className="flex h-full flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3"
@@ -539,7 +547,9 @@ export default function ({
                       >
                         <div className="flex items-start gap-3">
                           <div
-                            className={cn("mt-1 h-3 w-3 shrink-0 rounded-full bg-slate-300")}
+                            className={cn(
+                              "mt-1 h-3 w-3 shrink-0 rounded-full bg-slate-300",
+                            )}
                             style={{
                               backgroundColor: color
                                 ? `${getUserColor(+color)}`
@@ -548,11 +558,18 @@ export default function ({
                           />
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-slate-900 break-words">
-                              {displayName || formattedMobile || "Нэргүй артист"}
+                              {displayName ||
+                                formattedMobile ||
+                                "Нэргүй артист"}
                             </p>
                             {formattedMobile && (
                               <p className="text-xs text-slate-500">
                                 {formattedMobile}
+                              </p>
+                            )}
+                            {branchName && (
+                              <p className="text-xs text-slate-500">
+                                Салбар: {branchName}
                               </p>
                             )}
                           </div>
