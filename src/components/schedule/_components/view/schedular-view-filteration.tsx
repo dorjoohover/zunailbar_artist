@@ -250,7 +250,8 @@ export default function ({
   };
   const scheduledArtists = values.artists
     .map((user) => {
-      const [mobile, nickname, defaultBranchId, color] = user.value?.split("__");
+      const [mobile, nickname, defaultBranchId, color] =
+        user.value?.split("__") ?? [];
       const scheduleBlocks = getArtistScheduleBlocks(
         typeof user.item === "string" ? user.item : undefined,
       );
