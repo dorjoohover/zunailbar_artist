@@ -89,6 +89,6 @@ export const API = {
   [Api.user_salaries]: BASE + "user_salaries",
 };
 
-// export const baseUrl =
+export const baseUrl =
 //   process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-process.env.NEXT_PUBLIC_BASE_URL || "http://admin.zunailbar.mn/";
+process.env.NEXT_PUBLIC_BASE_URL || "http://artist.zunailbar.mn/";

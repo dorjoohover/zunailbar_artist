@@ -4,6 +4,15 @@ import { IOrder, Order } from "@/models";
 import { Dispatch, SVGProps } from "react";
 import { z } from "zod";
 
+// Enum-д байхгүй хуучин утгыг (жишээ нь chatbot-оос орсон захиалга) алдаа биш
+// undefined болгоно — эс бөгөөс "expected one of 10|20|..." гэж засах form гацдаг.
+const zEnumOpt = (e: Record<string, string | number>) =>
+  z.preprocess((val) => {
+    if (val == null) return val;
+    const n = typeof val === "string" ? parseInt(val, 10) : val;
+    return Object.values(e).includes(n as number) ? n : undefined;
+  }, z.nativeEnum(e).nullable().optional()) as unknown as number;
+
 export type IconSvgProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
@@ -151,24 +160,9 @@ export const eventSchema = z.object({
   end_time: zStrOpt({
     label: "Дуусах цаг",
   }),
-  order_status: z
-    .preprocess(
-      (val) => (typeof val === "string" ? parseInt(val, 10) : val),
-      z.nativeEnum(OrderStatus).nullable(),
-    )
-    .optional() as unknown as number,
-  method: z
-    .preprocess(
-      (val) => (typeof val === "string" ? parseInt(val, 10) : val),
-      z.nativeEnum(PaymentMethod).nullable(),
-    )
-    .optional() as unknown as number,
-  pre_method: z
-    .preprocess(
-      (val) => (typeof val === "string" ? parseInt(val, 10) : val),
-      z.nativeEnum(PaymentMethod).nullable(),
-    )
-    .optional() as unknown as number,
+  order_status: zEnumOpt(OrderStatus),
+  method: zEnumOpt(PaymentMethod),
+  pre_method: zEnumOpt(PaymentMethod),
   total_amount: zNumOpt({
     label: "Нийт үнэ",
     value: 0,
@@ -209,12 +203,7 @@ export const eventSchema = z.object({
     label: "Хөнгөлөлт",
     allowNullable: true,
   }),
-  discount_type: z
-    .preprocess(
-      (val) => (typeof val === "string" ? parseInt(val, 10) : val),
-      z.nativeEnum(VOUCHER).nullable(),
-    )
-    .optional() as unknown as number,
+  discount_type: zEnumOpt(VOUCHER),
   parallel: z.boolean().nullable().optional(),
   edit: z.string().nullable().optional(),
 }).superRefine((data, ctx) => {

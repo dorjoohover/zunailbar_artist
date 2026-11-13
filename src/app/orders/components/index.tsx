@@ -198,10 +198,18 @@ export const OrderPage = ({
             !branchLeaveIds.has(branchId)
           );
         })
-        .map((u) => ({
-          ...u,
-          item: scheduleItems.find((a) => a.user_id == u.id)?.times,
-        })),
+        .map((u) => {
+          const daySchedule = scheduleItems.find((a) => a.user_id == u.id);
+          const [, , defaultBranchId = ""] = u.value?.split("__") ?? [];
+          return {
+            ...u,
+            item: daySchedule?.times,
+            // Тухайн өдрийн бодит салбар (артист тухайн өдөр өөр салбарт
+            // шилжсэн бол schedule.branch_id нь users.branch_id-ээс өөр
+            // байж болно) — олдохгүй бол артистын үндсэн салбар руу буцна.
+            branch_id: daySchedule?.branch_id || defaultBranchId || undefined,
+          };
+        }),
     );
   };
 
@@ -345,25 +353,37 @@ export const OrderPage = ({
     setAction(ACTION.RUNNING);
     const { edit, ...body } = e as any;
     const payload = { ...body };
-    const res = edit
-      ? await updateOne<Order>(
-          Api.order,
-          edit ?? "",
-          { ...payload } as unknown as Order,
-          "update",
-        )
-      : await create(Api.order, { ...payload } as unknown as Order);
-    if (res.success) {
-      refresh();
-      showToast(
-        "success",
-        edit ? "Мэдээлэл шинэчиллээ!" : "Амжилттай нэмэгдлээ!",
-      );
-    } else {
-      showToast("info", res.error ?? "Алдаа гарлаа!", { duration: 5000 });
+    try {
+      const res = edit
+        ? await updateOne<Order>(
+            Api.order,
+            edit ?? "",
+            { ...payload } as unknown as Order,
+            "update",
+          )
+        : await create(Api.order, { ...payload } as unknown as Order);
+      if (res.success) {
+        if (edit) {
+          // Засварласны дараа soft refresh хийвэл заримдаа хуучин утга
+          // (жишээ нь салбар) хэвээр харагддаг тул full-reload хийнэ.
+          window.location.reload();
+        } else {
+          refresh();
+        }
+        showToast(
+          "success",
+          edit ? "Мэдээлэл шинэчиллээ!" : "Амжилттай нэмэгдлээ!",
+        );
+      } else {
+        showToast("info", res.error ?? "Алдаа гарлаа!", { duration: 5000 });
+      }
+      return res.success;
+    } catch (err: any) {
+      showToast("info", err?.message ?? "Алдаа гарлаа!", { duration: 5000 });
+      return false;
+    } finally {
+      setAction(ACTION.DEFAULT);
     }
-    setAction(ACTION.DEFAULT);
-    return res.success;
   };
 
   const downloadExcel = async (pg: PG = DEFAULT_PG) => {
@@ -424,20 +444,25 @@ export const OrderPage = ({
     );
 
     setAction(ACTION.RUNNING);
-    const res = await create(Api.order, { from, to } as any, "confirm");
-    const processed = Number((res?.data as any)?.payload?.count ?? 0);
-    const success = processed > 0;
+    try {
+      const res = await create(Api.order, { from, to } as any, "confirm");
+      const processed = Number((res?.data as any)?.payload?.count ?? 0);
+      const success = processed > 0;
 
-    showToast(
-      success ? "success" : "info",
-      success
-        ? from === to
-          ? `${from} өдрийн ${processed} захиалга бодогдлоо`
-          : `${from} - ${to} хоорондын ${processed} захиалга бодогдлоо`
-        : "Бодох захиалга олдсонгүй",
-    );
-    setAction(ACTION.DEFAULT);
-    rerunCurrentDateRange();
+      showToast(
+        success ? "success" : "info",
+        success
+          ? from === to
+            ? `${from} өдрийн ${processed} захиалга бодогдлоо`
+            : `${from} - ${to} хоорондын ${processed} захиалга бодогдлоо`
+          : "Бодох захиалга олдсонгүй",
+      );
+      rerunCurrentDateRange();
+    } catch (err: any) {
+      showToast("info", err?.message ?? "Алдаа гарлаа!", { duration: 5000 });
+    } finally {
+      setAction(ACTION.DEFAULT);
+    }
   };
 
   const columns = getColumns(edit, deleteOrders);

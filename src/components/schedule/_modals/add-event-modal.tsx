@@ -373,7 +373,10 @@ export default function AddEventModal({
   ) => {
     let result = artists;
     // 🟢 Service чадвартай artist
-    if (service_id) {
+    // userService mapping тухайн service-ийн хувьд ачаалагдсан үед л шүүнэ.
+    // Эс бөгөөс (mapping хараахан ирээгүй үед) бүх artist хоосон болж,
+    // дарааллаар 2 дахь artist сонгогдохгүй болдог байсан.
+    if (service_id && userService[service_id]) {
       const serviceArtistIds = new Set(userService[service_id]);
       result = result.filter((a) => serviceArtistIds.has(a.id));
     }

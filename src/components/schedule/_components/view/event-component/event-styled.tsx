@@ -218,8 +218,13 @@ export default function EventStyled({
   const color = event?.details?.[0]?.color;
   const secondColor = event?.details?.[1]?.color;
   const detailCount = event.details?.length ?? 0;
-  const isParallelOrder = event.parallel === true && detailCount > 1;
-  const isQueueOrder = event.parallel !== true && detailCount > 1;
+  // parallel флаг буруу/хоосон ирсэн ч detail-үүд ижил цагт эхэлж байвал зэрэгцээ гэж үзнэ.
+  const sameStart =
+    detailCount > 1 &&
+    new Set(event.details?.map((d) => d?.start_time?.slice(0, 5))).size === 1;
+  const isParallelOrder =
+    detailCount > 1 && (event.parallel === true || sameStart);
+  const isQueueOrder = detailCount > 1 && !isParallelOrder;
   const { start_time: eventStartTime, end_time: eventEndTime } =
     resolveOrderTimeRange(event);
   const level =
